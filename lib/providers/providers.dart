@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/services/services.dart';
-import '../core/models/models.dart';
 import '../data/database/database.dart';
 import '../core/proxy/proxy_isolate.dart';
 

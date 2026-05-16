@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import '../models/models.dart';
@@ -8,7 +9,6 @@ import '../adapters/gemini_adapter.dart';
 import '../adapters/openrouter_adapter.dart';
 import '../adapters/custom_openai_adapter.dart';
 import '../sse/sse_parser.dart';
-import '../pricing/pricing_engine.dart';
 
 class RequestTimeoutPolicy {
   final Duration connectTimeout;
@@ -61,21 +61,22 @@ class ProxyServer {
   List<ModelPriceConfig> _prices;
   final Map<int, dynamic> _adapters = {};
   HttpServer? _server;
-  final PricingEngine _pricingEngine = PricingEngine();
+  // PricingEngine instance available for future cost calculation enhancements
   final Function(Map<String, dynamic>)? onUsageLog;
   final Function(Map<String, dynamic>)? onStateChange;
-  Map<String, ProxyRouteConfigInternal> _routes = {};
+  final Map<String, ProxyRouteConfigInternal> _routes = {};
   ProxyState _state = ProxyState.stopped;
   DateTime? _startTime;
-  bool _enableCors;
-  bool _enableHttps;
+  final bool _enableCors;
+  final bool _enableHttps;
 
   ProxyState get state => _state;
   DateTime? get startTime => _startTime;
   int get actualPort => _server?.port ?? port;
-  Duration get uptime => _startTime != null ? DateTime.now().difference(_startTime!) : Duration.zero;
+  Duration get uptime => _startTime != null
+      ? DateTime.now().difference(_startTime!)
+      : Duration.zero;
   String get scheme => _enableHttps ? 'https' : 'http';
-
 
   ProxyServer({
     required this.host,
@@ -87,27 +88,73 @@ class ProxyServer {
     bool enableCors = true,
     bool enableHttps = false,
     List<ProxyRouteConfig> routes = const [],
-  })  : _accounts = accounts,
-        _prices = prices,
-        _enableCors = enableCors,
-        _enableHttps = enableHttps {
+  }) : _accounts = accounts,
+       _prices = prices,
+       _enableCors = enableCors,
+       _enableHttps = enableHttps {
     _initAdapters();
     _initRoutes(routes);
   }
 
   void _initRoutes(List<ProxyRouteConfig> routes) {
+    _routes.clear();
+    if (routes.isEmpty) {
+      _initDefaultRoutes();
+      return;
+    }
+
     for (final route in routes) {
-      _routes[route.pathPrefix] = ProxyRouteConfigInternal(
-        pathPrefix: route.pathPrefix,
-        accountId: route.accountId,
-        targetBaseUrl: route.targetBaseUrl,
-        providerType: _getProviderTypeForAccount(route.accountId),
+      _registerRoute(route.pathPrefix, route.accountId, route.targetBaseUrl);
+    }
+  }
+
+  void _initDefaultRoutes() {
+    final genericRoutes = <String>{};
+    for (final account in _accounts) {
+      final accountId = account.accountId;
+      if (accountId == null || !account.enabled || !account.proxyEnabled) {
+        continue;
+      }
+
+      final providerPath = _providerPath(account.providerType);
+      _registerRoute(
+        '/proxy/$providerPath/$accountId',
+        accountId,
+        account.baseUrl,
       );
+
+      final genericRoute = '/proxy/$providerPath';
+      if (genericRoutes.add(genericRoute)) {
+        _registerRoute(genericRoute, accountId, account.baseUrl);
+      }
+    }
+  }
+
+  void _registerRoute(String pathPrefix, int accountId, String targetBaseUrl) {
+    _routes[pathPrefix] = ProxyRouteConfigInternal(
+      pathPrefix: pathPrefix,
+      accountId: accountId,
+      targetBaseUrl: targetBaseUrl,
+      providerType: _getProviderTypeForAccount(accountId),
+    );
+  }
+
+  String _providerPath(ProviderType type) {
+    switch (type) {
+      case ProviderType.customOpenAI:
+        return 'custom';
+      case ProviderType.deepseek:
+      case ProviderType.mimo:
+      case ProviderType.gemini:
+      case ProviderType.openrouter:
+        return type.name;
     }
   }
 
   ProviderType _getProviderTypeForAccount(int accountId) {
-    final account = _accounts.where((a) => a.accountId == accountId).firstOrNull;
+    final account = _accounts
+        .where((a) => a.accountId == accountId)
+        .firstOrNull;
     return account?.providerType ?? ProviderType.customOpenAI;
   }
 
@@ -135,12 +182,7 @@ class ProxyServer {
       _state = ProxyState.starting;
       _startTime = DateTime.now();
 
-      HttpServer server;
-      if (_enableHttps) {
-        server = await HttpServer.bindSecure(host, port);
-      } else {
-        server = await HttpServer.bind(host, port);
-      }
+      final server = await _bindServerWithFallback();
 
       _server = server;
       _state = ProxyState.running;
@@ -151,6 +193,36 @@ class ProxyServer {
       _state = ProxyState.stopped;
       rethrow;
     }
+  }
+
+  Future<HttpServer> _bindServerWithFallback() async {
+    final candidates = <int>[];
+    if (port > 0) candidates.add(port);
+    if (!candidates.contains(8787)) candidates.add(8787);
+    for (var fallbackPort = 8788; fallbackPort <= 8899; fallbackPort++) {
+      if (!candidates.contains(fallbackPort)) {
+        candidates.add(fallbackPort);
+      }
+    }
+    candidates.add(0);
+
+    Object? lastError;
+    for (final candidate in candidates) {
+      try {
+        final server = _enableHttps
+            ? await HttpServer.bindSecure(host, candidate, SecurityContext())
+            : await HttpServer.bind(host, candidate);
+        server.idleTimeout = const Duration(minutes: 5);
+        return server;
+      } catch (e) {
+        lastError = e;
+        if (e is! SocketException && e is! OSError) {
+          rethrow;
+        }
+      }
+    }
+
+    throw StateError('Unable to bind proxy port: $lastError');
   }
 
   Future<void> stop() async {
@@ -189,7 +261,9 @@ class ProxyServer {
       return;
     }
 
-    final account = _accounts.where((a) => a.accountId == route.accountId).firstOrNull;
+    final account = _accounts
+        .where((a) => a.accountId == route.accountId)
+        .firstOrNull;
     if (account == null || !account.enabled || account.apiKey.isEmpty) {
       request.response.statusCode = HttpStatus.unauthorized;
       request.response.write('{"error": "Account not found or disabled"}');
@@ -198,7 +272,8 @@ class ProxyServer {
     }
 
     final targetPath = path.substring(route.pathPrefix.length);
-    final targetUrl = '${route.targetBaseUrl}$targetPath${request.uri.query.isNotEmpty ? "?${request.uri.query}" : ""}';
+    final targetUrl =
+        '${route.targetBaseUrl}$targetPath${request.uri.query.isNotEmpty ? "?${request.uri.query}" : ""}';
 
     try {
       final uri = Uri.parse(targetUrl);
@@ -212,9 +287,18 @@ class ProxyServer {
         proxyRequest = await client.postUrl(uri);
       }
 
-      proxyRequest.headers.set(HttpHeaders.authorizationHeader, 'Bearer ${account.apiKey}');
-      proxyRequest.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-      proxyRequest.headers.set(HttpHeaders.acceptHeader, 'text/event-stream, application/json');
+      proxyRequest.headers.set(
+        HttpHeaders.authorizationHeader,
+        'Bearer ${account.apiKey}',
+      );
+      proxyRequest.headers.set(
+        HttpHeaders.contentTypeHeader,
+        'application/json',
+      );
+      proxyRequest.headers.set(
+        HttpHeaders.acceptHeader,
+        'text/event-stream, application/json',
+      );
 
       if (method != 'GET') {
         final bodyBytes = await request.fold<List<int>>(
@@ -227,12 +311,25 @@ class ProxyServer {
       final proxyResponse = await proxyRequest.close();
       request.response.statusCode = proxyResponse.statusCode;
 
-      final isStreaming = proxyResponse.headers.value(HttpHeaders.contentTypeHeader)?.contains('text/event-stream') == true;
+      final isStreaming =
+          proxyResponse.headers
+              .value(HttpHeaders.contentTypeHeader)
+              ?.contains('text/event-stream') ==
+          true;
 
       if (isStreaming) {
-        request.response.headers.set(HttpHeaders.contentTypeHeader, 'text/event-stream');
-        request.response.headers.set(HttpHeaders.cacheControlHeader, 'no-cache');
-        request.response.headers.set(HttpHeaders.connectionHeader, 'keep-alive');
+        request.response.headers.set(
+          HttpHeaders.contentTypeHeader,
+          'text/event-stream',
+        );
+        request.response.headers.set(
+          HttpHeaders.cacheControlHeader,
+          'no-cache',
+        );
+        request.response.headers.set(
+          HttpHeaders.connectionHeader,
+          'keep-alive',
+        );
         request.response.headers.set('Access-Control-Allow-Origin', '*');
 
         final assembler = SseFrameAssembler();
@@ -269,7 +366,14 @@ class ProxyServer {
           completionTokens = (completionBuffer.toString().length * 0.5).ceil();
         }
 
-        final cost = _calculateCost(account.providerType, _extractModelFromPath(targetPath), promptTokens, completionTokens, 0, 0);
+        final cost = _calculateCost(
+          account.providerType,
+          _extractModelFromPath(targetPath),
+          promptTokens,
+          completionTokens,
+          0,
+          0,
+        );
 
         onUsageLog?.call({
           'accountId': account.accountId,
@@ -296,12 +400,20 @@ class ProxyServer {
         await request.response.close();
 
         try {
-          final json = jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
+          final json =
+              jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
           final usage = json['usage'];
           if (usage != null) {
             final promptTokens = usage['prompt_tokens'] as int? ?? 0;
             final completionTokens = usage['completion_tokens'] as int? ?? 0;
-            final cost = _calculateCost(account.providerType, _extractModelFromPath(targetPath), promptTokens, completionTokens, 0, 0);
+            final cost = _calculateCost(
+              account.providerType,
+              _extractModelFromPath(targetPath),
+              promptTokens,
+              completionTokens,
+              0,
+              0,
+            );
 
             onUsageLog?.call({
               'accountId': account.accountId,
@@ -329,7 +441,9 @@ class ProxyServer {
   }
 
   ProxyRouteConfigInternal? _findRoute(String path) {
-    for (final route in _routes.values) {
+    final routes = _routes.values.toList()
+      ..sort((a, b) => b.pathPrefix.length.compareTo(a.pathPrefix.length));
+    for (final route in routes) {
       if (path.startsWith(route.pathPrefix)) {
         return route;
       }
@@ -359,7 +473,9 @@ class ProxyServer {
     int reasoningTokens,
   ) {
     final price = _prices
-        .where((p) => p.providerType == providerType && p.modelName == modelName)
+        .where(
+          (p) => p.providerType == providerType && p.modelName == modelName,
+        )
         .firstOrNull;
 
     if (price == null) return null;
@@ -379,13 +495,53 @@ class ProxyServer {
 
   void _addCorsHeaders(HttpRequest request) {
     final response = request.response;
+    final requestedHeaders = request.headers.value(
+      'Access-Control-Request-Headers',
+    );
+    final allowHeaders =
+        requestedHeaders == null || requestedHeaders.trim().isEmpty
+        ? 'Authorization, Content-Type, Accept, Origin, User-Agent, X-Requested-With, X-API-Key, x-api-key, anthropic-version, anthropic-dangerous-direct-browser-access, openai-organization, openai-project'
+        : _mergeCorsHeaders(requestedHeaders);
+
     response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept, Origin, User-Agent');
+    response.headers.set(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    );
+    response.headers.set('Access-Control-Allow-Headers', allowHeaders);
+    response.headers.set(
+      'Access-Control-Expose-Headers',
+      'Content-Type, Cache-Control, Connection, X-Request-ID',
+    );
     response.headers.set('Access-Control-Max-Age', '86400');
   }
 
+  String _mergeCorsHeaders(String requestedHeaders) {
+    final values = requestedHeaders
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList();
+    final lowerValues = values.map((value) => value.toLowerCase()).toSet();
+    for (final requiredHeader in ['Authorization', 'Content-Type']) {
+      if (!lowerValues.contains(requiredHeader.toLowerCase())) {
+        values.add(requiredHeader);
+      }
+    }
+    return values.join(', ');
+  }
+
   Future<void> _handleHealthCheck(HttpRequest request) async {
+    final remoteAddress = request.connectionInfo?.remoteAddress;
+    if (remoteAddress != null && !remoteAddress.isLoopback) {
+      request.response.statusCode = HttpStatus.forbidden;
+      request.response.write(
+        jsonEncode({'ok': false, 'error': 'loopback_only'}),
+      );
+      await request.response.close();
+      return;
+    }
+
     final healthResponse = {
       'ok': true,
       'state': _state.name,
@@ -393,11 +549,15 @@ class ProxyServer {
       'host': host,
       'port': actualPort,
       'database': 'ok',
+      'pending_queue': 0,
       'uptime_ms': uptime.inMilliseconds,
       'version': '1.0.0',
     };
 
-    request.response.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+    request.response.headers.set(
+      HttpHeaders.contentTypeHeader,
+      'application/json',
+    );
     request.response.write(jsonEncode(healthResponse));
     await request.response.close();
   }

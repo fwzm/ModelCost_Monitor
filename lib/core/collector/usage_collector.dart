@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:drift/drift.dart' show Value;
-
 import '../../data/database/database.dart';
 
 class PendingUsageLog {
@@ -27,20 +25,14 @@ class UsageCollector {
   Timer? _flushTimer;
   bool _isFlushing = false;
   final int _flushIntervalMs;
-  final int _maxRetries;
-  final int _retryBaseIntervalMs;
   int _totalWrites = 0;
   int _failedWrites = 0;
 
   UsageCollector({
     required AppDatabase db,
     int flushIntervalMs = 500,
-    int maxRetries = 5,
-    int retryBaseIntervalMs = 100,
   })  : _db = db,
-        _flushIntervalMs = flushIntervalMs,
-        _maxRetries = maxRetries,
-        _retryBaseIntervalMs = retryBaseIntervalMs;
+        _flushIntervalMs = flushIntervalMs;
 
   void start() {
     _flushTimer = Timer.periodic(

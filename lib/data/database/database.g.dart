@@ -21,15 +21,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _providerTypeMeta = const VerificationMeta(
+    'providerType',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<ProviderType, String>
-  providerType = GeneratedColumn<String>(
+  late final GeneratedColumn<String> providerType = GeneratedColumn<String>(
     'provider_type',
     aliasedName,
     false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-  ).withConverter<ProviderType>($AccountsTable.$converterproviderType);
+  );
   static const VerificationMeta _displayNameMeta = const VerificationMeta(
     'displayName',
   );
@@ -163,6 +166,17 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
+    if (data.containsKey('provider_type')) {
+      context.handle(
+        _providerTypeMeta,
+        providerType.isAcceptableOrUnknown(
+          data['provider_type']!,
+          _providerTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_providerTypeMeta);
+    }
     if (data.containsKey('display_name')) {
       context.handle(
         _displayNameMeta,
@@ -237,12 +251,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
-      providerType: $AccountsTable.$converterproviderType.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}provider_type'],
-        )!,
-      ),
+      providerType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_type'],
+      )!,
       displayName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
@@ -282,16 +294,11 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
   $AccountsTable createAlias(String alias) {
     return $AccountsTable(attachedDatabase, alias);
   }
-
-  static JsonTypeConverter2<ProviderType, String, String>
-  $converterproviderType = const EnumNameConverter<ProviderType>(
-    ProviderType.values,
-  );
 }
 
 class Account extends DataClass implements Insertable<Account> {
   final int id;
-  final ProviderType providerType;
+  final String providerType;
   final String displayName;
   final String baseUrl;
   final String? apiKeyAlias;
@@ -316,11 +323,7 @@ class Account extends DataClass implements Insertable<Account> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    {
-      map['provider_type'] = Variable<String>(
-        $AccountsTable.$converterproviderType.toSql(providerType),
-      );
-    }
+    map['provider_type'] = Variable<String>(providerType);
     map['display_name'] = Variable<String>(displayName);
     map['base_url'] = Variable<String>(baseUrl);
     if (!nullToAbsent || apiKeyAlias != null) {
@@ -358,9 +361,7 @@ class Account extends DataClass implements Insertable<Account> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Account(
       id: serializer.fromJson<int>(json['id']),
-      providerType: $AccountsTable.$converterproviderType.fromJson(
-        serializer.fromJson<String>(json['providerType']),
-      ),
+      providerType: serializer.fromJson<String>(json['providerType']),
       displayName: serializer.fromJson<String>(json['displayName']),
       baseUrl: serializer.fromJson<String>(json['baseUrl']),
       apiKeyAlias: serializer.fromJson<String?>(json['apiKeyAlias']),
@@ -376,9 +377,7 @@ class Account extends DataClass implements Insertable<Account> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'providerType': serializer.toJson<String>(
-        $AccountsTable.$converterproviderType.toJson(providerType),
-      ),
+      'providerType': serializer.toJson<String>(providerType),
       'displayName': serializer.toJson<String>(displayName),
       'baseUrl': serializer.toJson<String>(baseUrl),
       'apiKeyAlias': serializer.toJson<String?>(apiKeyAlias),
@@ -392,7 +391,7 @@ class Account extends DataClass implements Insertable<Account> {
 
   Account copyWith({
     int? id,
-    ProviderType? providerType,
+    String? providerType,
     String? displayName,
     String? baseUrl,
     Value<String?> apiKeyAlias = const Value.absent(),
@@ -484,7 +483,7 @@ class Account extends DataClass implements Insertable<Account> {
 
 class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<int> id;
-  final Value<ProviderType> providerType;
+  final Value<String> providerType;
   final Value<String> displayName;
   final Value<String> baseUrl;
   final Value<String?> apiKeyAlias;
@@ -507,7 +506,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   });
   AccountsCompanion.insert({
     this.id = const Value.absent(),
-    required ProviderType providerType,
+    required String providerType,
     required String displayName,
     required String baseUrl,
     this.apiKeyAlias = const Value.absent(),
@@ -547,7 +546,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
 
   AccountsCompanion copyWith({
     Value<int>? id,
-    Value<ProviderType>? providerType,
+    Value<String>? providerType,
     Value<String>? displayName,
     Value<String>? baseUrl,
     Value<String?>? apiKeyAlias,
@@ -578,9 +577,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       map['id'] = Variable<int>(id.value);
     }
     if (providerType.present) {
-      map['provider_type'] = Variable<String>(
-        $AccountsTable.$converterproviderType.toSql(providerType.value),
-      );
+      map['provider_type'] = Variable<String>(providerType.value);
     }
     if (displayName.present) {
       map['display_name'] = Variable<String>(displayName.value);
@@ -1353,15 +1350,18 @@ class $UsageLogsTable extends UsageLogs
       'REFERENCES accounts (id)',
     ),
   );
+  static const VerificationMeta _providerTypeMeta = const VerificationMeta(
+    'providerType',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<ProviderType, String>
-  providerType = GeneratedColumn<String>(
+  late final GeneratedColumn<String> providerType = GeneratedColumn<String>(
     'provider_type',
     aliasedName,
     false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-  ).withConverter<ProviderType>($UsageLogsTable.$converterproviderType);
+  );
   static const VerificationMeta _modelNameMeta = const VerificationMeta(
     'modelName',
   );
@@ -1512,15 +1512,18 @@ class $UsageLogsTable extends UsageLogs
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _requestStatusMeta = const VerificationMeta(
+    'requestStatus',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<RequestStatus, String>
-  requestStatus = GeneratedColumn<String>(
+  late final GeneratedColumn<String> requestStatus = GeneratedColumn<String>(
     'request_status',
     aliasedName,
     false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-  ).withConverter<RequestStatus>($UsageLogsTable.$converterrequestStatus);
+  );
   static const VerificationMeta _errorMessageMeta = const VerificationMeta(
     'errorMessage',
   );
@@ -1532,15 +1535,16 @@ class $UsageLogsTable extends UsageLogs
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
   @override
-  late final GeneratedColumnWithTypeConverter<UsageSource, String> source =
-      GeneratedColumn<String>(
-        'source',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<UsageSource>($UsageLogsTable.$convertersource);
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1598,6 +1602,17 @@ class $UsageLogsTable extends UsageLogs
       );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('provider_type')) {
+      context.handle(
+        _providerTypeMeta,
+        providerType.isAcceptableOrUnknown(
+          data['provider_type']!,
+          _providerTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_providerTypeMeta);
     }
     if (data.containsKey('model_name')) {
       context.handle(
@@ -1707,6 +1722,17 @@ class $UsageLogsTable extends UsageLogs
         statusCode.isAcceptableOrUnknown(data['status_code']!, _statusCodeMeta),
       );
     }
+    if (data.containsKey('request_status')) {
+      context.handle(
+        _requestStatusMeta,
+        requestStatus.isAcceptableOrUnknown(
+          data['request_status']!,
+          _requestStatusMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_requestStatusMeta);
+    }
     if (data.containsKey('error_message')) {
       context.handle(
         _errorMessageMeta,
@@ -1715,6 +1741,14 @@ class $UsageLogsTable extends UsageLogs
           _errorMessageMeta,
         ),
       );
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -1739,12 +1773,10 @@ class $UsageLogsTable extends UsageLogs
         DriftSqlType.int,
         data['${effectivePrefix}account_id'],
       )!,
-      providerType: $UsageLogsTable.$converterproviderType.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}provider_type'],
-        )!,
-      ),
+      providerType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_type'],
+      )!,
       modelName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}model_name'],
@@ -1797,22 +1829,18 @@ class $UsageLogsTable extends UsageLogs
         DriftSqlType.int,
         data['${effectivePrefix}status_code'],
       ),
-      requestStatus: $UsageLogsTable.$converterrequestStatus.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}request_status'],
-        )!,
-      ),
+      requestStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}request_status'],
+      )!,
       errorMessage: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}error_message'],
       ),
-      source: $UsageLogsTable.$convertersource.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}source'],
-        )!,
-      ),
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1824,23 +1852,12 @@ class $UsageLogsTable extends UsageLogs
   $UsageLogsTable createAlias(String alias) {
     return $UsageLogsTable(attachedDatabase, alias);
   }
-
-  static JsonTypeConverter2<ProviderType, String, String>
-  $converterproviderType = const EnumNameConverter<ProviderType>(
-    ProviderType.values,
-  );
-  static JsonTypeConverter2<RequestStatus, String, String>
-  $converterrequestStatus = const EnumNameConverter<RequestStatus>(
-    RequestStatus.values,
-  );
-  static JsonTypeConverter2<UsageSource, String, String> $convertersource =
-      const EnumNameConverter<UsageSource>(UsageSource.values);
 }
 
 class UsageLog extends DataClass implements Insertable<UsageLog> {
   final int id;
   final int accountId;
-  final ProviderType providerType;
+  final String providerType;
   final String modelName;
   final DateTime requestTime;
   final int? promptTokens;
@@ -1854,9 +1871,9 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
   final double? cost;
   final String currency;
   final int? statusCode;
-  final RequestStatus requestStatus;
+  final String requestStatus;
   final String? errorMessage;
-  final UsageSource source;
+  final String source;
   final DateTime createdAt;
   const UsageLog({
     required this.id,
@@ -1885,11 +1902,7 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['account_id'] = Variable<int>(accountId);
-    {
-      map['provider_type'] = Variable<String>(
-        $UsageLogsTable.$converterproviderType.toSql(providerType),
-      );
-    }
+    map['provider_type'] = Variable<String>(providerType);
     map['model_name'] = Variable<String>(modelName);
     map['request_time'] = Variable<DateTime>(requestTime);
     if (!nullToAbsent || promptTokens != null) {
@@ -1919,19 +1932,11 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
     if (!nullToAbsent || statusCode != null) {
       map['status_code'] = Variable<int>(statusCode);
     }
-    {
-      map['request_status'] = Variable<String>(
-        $UsageLogsTable.$converterrequestStatus.toSql(requestStatus),
-      );
-    }
+    map['request_status'] = Variable<String>(requestStatus);
     if (!nullToAbsent || errorMessage != null) {
       map['error_message'] = Variable<String>(errorMessage);
     }
-    {
-      map['source'] = Variable<String>(
-        $UsageLogsTable.$convertersource.toSql(source),
-      );
-    }
+    map['source'] = Variable<String>(source);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1985,9 +1990,7 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
     return UsageLog(
       id: serializer.fromJson<int>(json['id']),
       accountId: serializer.fromJson<int>(json['accountId']),
-      providerType: $UsageLogsTable.$converterproviderType.fromJson(
-        serializer.fromJson<String>(json['providerType']),
-      ),
+      providerType: serializer.fromJson<String>(json['providerType']),
       modelName: serializer.fromJson<String>(json['modelName']),
       requestTime: serializer.fromJson<DateTime>(json['requestTime']),
       promptTokens: serializer.fromJson<int?>(json['promptTokens']),
@@ -2001,13 +2004,9 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
       cost: serializer.fromJson<double?>(json['cost']),
       currency: serializer.fromJson<String>(json['currency']),
       statusCode: serializer.fromJson<int?>(json['statusCode']),
-      requestStatus: $UsageLogsTable.$converterrequestStatus.fromJson(
-        serializer.fromJson<String>(json['requestStatus']),
-      ),
+      requestStatus: serializer.fromJson<String>(json['requestStatus']),
       errorMessage: serializer.fromJson<String?>(json['errorMessage']),
-      source: $UsageLogsTable.$convertersource.fromJson(
-        serializer.fromJson<String>(json['source']),
-      ),
+      source: serializer.fromJson<String>(json['source']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2017,9 +2016,7 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'accountId': serializer.toJson<int>(accountId),
-      'providerType': serializer.toJson<String>(
-        $UsageLogsTable.$converterproviderType.toJson(providerType),
-      ),
+      'providerType': serializer.toJson<String>(providerType),
       'modelName': serializer.toJson<String>(modelName),
       'requestTime': serializer.toJson<DateTime>(requestTime),
       'promptTokens': serializer.toJson<int?>(promptTokens),
@@ -2033,13 +2030,9 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
       'cost': serializer.toJson<double?>(cost),
       'currency': serializer.toJson<String>(currency),
       'statusCode': serializer.toJson<int?>(statusCode),
-      'requestStatus': serializer.toJson<String>(
-        $UsageLogsTable.$converterrequestStatus.toJson(requestStatus),
-      ),
+      'requestStatus': serializer.toJson<String>(requestStatus),
       'errorMessage': serializer.toJson<String?>(errorMessage),
-      'source': serializer.toJson<String>(
-        $UsageLogsTable.$convertersource.toJson(source),
-      ),
+      'source': serializer.toJson<String>(source),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2047,7 +2040,7 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
   UsageLog copyWith({
     int? id,
     int? accountId,
-    ProviderType? providerType,
+    String? providerType,
     String? modelName,
     DateTime? requestTime,
     Value<int?> promptTokens = const Value.absent(),
@@ -2061,9 +2054,9 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
     Value<double?> cost = const Value.absent(),
     String? currency,
     Value<int?> statusCode = const Value.absent(),
-    RequestStatus? requestStatus,
+    String? requestStatus,
     Value<String?> errorMessage = const Value.absent(),
-    UsageSource? source,
+    String? source,
     DateTime? createdAt,
   }) => UsageLog(
     id: id ?? this.id,
@@ -2221,7 +2214,7 @@ class UsageLog extends DataClass implements Insertable<UsageLog> {
 class UsageLogsCompanion extends UpdateCompanion<UsageLog> {
   final Value<int> id;
   final Value<int> accountId;
-  final Value<ProviderType> providerType;
+  final Value<String> providerType;
   final Value<String> modelName;
   final Value<DateTime> requestTime;
   final Value<int?> promptTokens;
@@ -2235,9 +2228,9 @@ class UsageLogsCompanion extends UpdateCompanion<UsageLog> {
   final Value<double?> cost;
   final Value<String> currency;
   final Value<int?> statusCode;
-  final Value<RequestStatus> requestStatus;
+  final Value<String> requestStatus;
   final Value<String?> errorMessage;
-  final Value<UsageSource> source;
+  final Value<String> source;
   final Value<DateTime> createdAt;
   const UsageLogsCompanion({
     this.id = const Value.absent(),
@@ -2264,7 +2257,7 @@ class UsageLogsCompanion extends UpdateCompanion<UsageLog> {
   UsageLogsCompanion.insert({
     this.id = const Value.absent(),
     required int accountId,
-    required ProviderType providerType,
+    required String providerType,
     required String modelName,
     required DateTime requestTime,
     this.promptTokens = const Value.absent(),
@@ -2278,9 +2271,9 @@ class UsageLogsCompanion extends UpdateCompanion<UsageLog> {
     this.cost = const Value.absent(),
     required String currency,
     this.statusCode = const Value.absent(),
-    required RequestStatus requestStatus,
+    required String requestStatus,
     this.errorMessage = const Value.absent(),
-    required UsageSource source,
+    required String source,
     this.createdAt = const Value.absent(),
   }) : accountId = Value(accountId),
        providerType = Value(providerType),
@@ -2338,7 +2331,7 @@ class UsageLogsCompanion extends UpdateCompanion<UsageLog> {
   UsageLogsCompanion copyWith({
     Value<int>? id,
     Value<int>? accountId,
-    Value<ProviderType>? providerType,
+    Value<String>? providerType,
     Value<String>? modelName,
     Value<DateTime>? requestTime,
     Value<int?>? promptTokens,
@@ -2352,9 +2345,9 @@ class UsageLogsCompanion extends UpdateCompanion<UsageLog> {
     Value<double?>? cost,
     Value<String>? currency,
     Value<int?>? statusCode,
-    Value<RequestStatus>? requestStatus,
+    Value<String>? requestStatus,
     Value<String?>? errorMessage,
-    Value<UsageSource>? source,
+    Value<String>? source,
     Value<DateTime>? createdAt,
   }) {
     return UsageLogsCompanion(
@@ -2391,9 +2384,7 @@ class UsageLogsCompanion extends UpdateCompanion<UsageLog> {
       map['account_id'] = Variable<int>(accountId.value);
     }
     if (providerType.present) {
-      map['provider_type'] = Variable<String>(
-        $UsageLogsTable.$converterproviderType.toSql(providerType.value),
-      );
+      map['provider_type'] = Variable<String>(providerType.value);
     }
     if (modelName.present) {
       map['model_name'] = Variable<String>(modelName.value);
@@ -2435,17 +2426,13 @@ class UsageLogsCompanion extends UpdateCompanion<UsageLog> {
       map['status_code'] = Variable<int>(statusCode.value);
     }
     if (requestStatus.present) {
-      map['request_status'] = Variable<String>(
-        $UsageLogsTable.$converterrequestStatus.toSql(requestStatus.value),
-      );
+      map['request_status'] = Variable<String>(requestStatus.value);
     }
     if (errorMessage.present) {
       map['error_message'] = Variable<String>(errorMessage.value);
     }
     if (source.present) {
-      map['source'] = Variable<String>(
-        $UsageLogsTable.$convertersource.toSql(source.value),
-      );
+      map['source'] = Variable<String>(source.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -2500,15 +2487,18 @@ class $ModelPricesTable extends ModelPrices
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _providerTypeMeta = const VerificationMeta(
+    'providerType',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<ProviderType, String>
-  providerType = GeneratedColumn<String>(
+  late final GeneratedColumn<String> providerType = GeneratedColumn<String>(
     'provider_type',
     aliasedName,
     false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-  ).withConverter<ProviderType>($ModelPricesTable.$converterproviderType);
+  );
   static const VerificationMeta _modelNameMeta = const VerificationMeta(
     'modelName',
   );
@@ -2682,6 +2672,17 @@ class $ModelPricesTable extends ModelPrices
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
+    if (data.containsKey('provider_type')) {
+      context.handle(
+        _providerTypeMeta,
+        providerType.isAcceptableOrUnknown(
+          data['provider_type']!,
+          _providerTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_providerTypeMeta);
+    }
     if (data.containsKey('model_name')) {
       context.handle(
         _modelNameMeta,
@@ -2787,10 +2788,6 @@ class $ModelPricesTable extends ModelPrices
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-    {providerType, modelName},
-  ];
-  @override
   ModelPrice map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return ModelPrice(
@@ -2798,12 +2795,10 @@ class $ModelPricesTable extends ModelPrices
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
-      providerType: $ModelPricesTable.$converterproviderType.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}provider_type'],
-        )!,
-      ),
+      providerType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_type'],
+      )!,
       modelName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}model_name'],
@@ -2859,16 +2854,11 @@ class $ModelPricesTable extends ModelPrices
   $ModelPricesTable createAlias(String alias) {
     return $ModelPricesTable(attachedDatabase, alias);
   }
-
-  static JsonTypeConverter2<ProviderType, String, String>
-  $converterproviderType = const EnumNameConverter<ProviderType>(
-    ProviderType.values,
-  );
 }
 
 class ModelPrice extends DataClass implements Insertable<ModelPrice> {
   final int id;
-  final ProviderType providerType;
+  final String providerType;
   final String modelName;
   final double inputPricePer1M;
   final double outputPricePer1M;
@@ -2901,11 +2891,7 @@ class ModelPrice extends DataClass implements Insertable<ModelPrice> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    {
-      map['provider_type'] = Variable<String>(
-        $ModelPricesTable.$converterproviderType.toSql(providerType),
-      );
-    }
+    map['provider_type'] = Variable<String>(providerType);
     map['model_name'] = Variable<String>(modelName);
     map['input_price_per1_m'] = Variable<double>(inputPricePer1M);
     map['output_price_per1_m'] = Variable<double>(outputPricePer1M);
@@ -2972,9 +2958,7 @@ class ModelPrice extends DataClass implements Insertable<ModelPrice> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return ModelPrice(
       id: serializer.fromJson<int>(json['id']),
-      providerType: $ModelPricesTable.$converterproviderType.fromJson(
-        serializer.fromJson<String>(json['providerType']),
-      ),
+      providerType: serializer.fromJson<String>(json['providerType']),
       modelName: serializer.fromJson<String>(json['modelName']),
       inputPricePer1M: serializer.fromJson<double>(json['inputPricePer1M']),
       outputPricePer1M: serializer.fromJson<double>(json['outputPricePer1M']),
@@ -2998,9 +2982,7 @@ class ModelPrice extends DataClass implements Insertable<ModelPrice> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'providerType': serializer.toJson<String>(
-        $ModelPricesTable.$converterproviderType.toJson(providerType),
-      ),
+      'providerType': serializer.toJson<String>(providerType),
       'modelName': serializer.toJson<String>(modelName),
       'inputPricePer1M': serializer.toJson<double>(inputPricePer1M),
       'outputPricePer1M': serializer.toJson<double>(outputPricePer1M),
@@ -3022,7 +3004,7 @@ class ModelPrice extends DataClass implements Insertable<ModelPrice> {
 
   ModelPrice copyWith({
     int? id,
-    ProviderType? providerType,
+    String? providerType,
     String? modelName,
     double? inputPricePer1M,
     double? outputPricePer1M,
@@ -3154,7 +3136,7 @@ class ModelPrice extends DataClass implements Insertable<ModelPrice> {
 
 class ModelPricesCompanion extends UpdateCompanion<ModelPrice> {
   final Value<int> id;
-  final Value<ProviderType> providerType;
+  final Value<String> providerType;
   final Value<String> modelName;
   final Value<double> inputPricePer1M;
   final Value<double> outputPricePer1M;
@@ -3185,7 +3167,7 @@ class ModelPricesCompanion extends UpdateCompanion<ModelPrice> {
   });
   ModelPricesCompanion.insert({
     this.id = const Value.absent(),
-    required ProviderType providerType,
+    required String providerType,
     required String modelName,
     required double inputPricePer1M,
     required double outputPricePer1M,
@@ -3240,7 +3222,7 @@ class ModelPricesCompanion extends UpdateCompanion<ModelPrice> {
 
   ModelPricesCompanion copyWith({
     Value<int>? id,
-    Value<ProviderType>? providerType,
+    Value<String>? providerType,
     Value<String>? modelName,
     Value<double>? inputPricePer1M,
     Value<double>? outputPricePer1M,
@@ -3281,9 +3263,7 @@ class ModelPricesCompanion extends UpdateCompanion<ModelPrice> {
       map['id'] = Variable<int>(id.value);
     }
     if (providerType.present) {
-      map['provider_type'] = Variable<String>(
-        $ModelPricesTable.$converterproviderType.toSql(providerType.value),
-      );
+      map['provider_type'] = Variable<String>(providerType.value);
     }
     if (modelName.present) {
       map['model_name'] = Variable<String>(modelName.value);
@@ -3392,15 +3372,18 @@ class $AlertRulesTable extends AlertRules
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _providerTypeMeta = const VerificationMeta(
+    'providerType',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<ProviderType?, String>
-  providerType = GeneratedColumn<String>(
+  late final GeneratedColumn<String> providerType = GeneratedColumn<String>(
     'provider_type',
     aliasedName,
     true,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-  ).withConverter<ProviderType?>($AlertRulesTable.$converterproviderTypen);
+  );
   static const VerificationMeta _accountIdMeta = const VerificationMeta(
     'accountId',
   );
@@ -3483,6 +3466,15 @@ class $AlertRulesTable extends AlertRules
     } else if (isInserting) {
       context.missing(_thresholdMeta);
     }
+    if (data.containsKey('provider_type')) {
+      context.handle(
+        _providerTypeMeta,
+        providerType.isAcceptableOrUnknown(
+          data['provider_type']!,
+          _providerTypeMeta,
+        ),
+      );
+    }
     if (data.containsKey('account_id')) {
       context.handle(
         _accountIdMeta,
@@ -3522,11 +3514,9 @@ class $AlertRulesTable extends AlertRules
         DriftSqlType.double,
         data['${effectivePrefix}threshold'],
       )!,
-      providerType: $AlertRulesTable.$converterproviderTypen.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}provider_type'],
-        ),
+      providerType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_type'],
       ),
       accountId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -3547,22 +3537,13 @@ class $AlertRulesTable extends AlertRules
   $AlertRulesTable createAlias(String alias) {
     return $AlertRulesTable(attachedDatabase, alias);
   }
-
-  static JsonTypeConverter2<ProviderType, String, String>
-  $converterproviderType = const EnumNameConverter<ProviderType>(
-    ProviderType.values,
-  );
-  static JsonTypeConverter2<ProviderType?, String?, String?>
-  $converterproviderTypen = JsonTypeConverter2.asNullable(
-    $converterproviderType,
-  );
 }
 
 class AlertRule extends DataClass implements Insertable<AlertRule> {
   final int id;
   final String alertType;
   final double threshold;
-  final ProviderType? providerType;
+  final String? providerType;
   final int? accountId;
   final bool enabled;
   final DateTime createdAt;
@@ -3582,9 +3563,7 @@ class AlertRule extends DataClass implements Insertable<AlertRule> {
     map['alert_type'] = Variable<String>(alertType);
     map['threshold'] = Variable<double>(threshold);
     if (!nullToAbsent || providerType != null) {
-      map['provider_type'] = Variable<String>(
-        $AlertRulesTable.$converterproviderTypen.toSql(providerType),
-      );
+      map['provider_type'] = Variable<String>(providerType);
     }
     if (!nullToAbsent || accountId != null) {
       map['account_id'] = Variable<int>(accountId);
@@ -3619,9 +3598,7 @@ class AlertRule extends DataClass implements Insertable<AlertRule> {
       id: serializer.fromJson<int>(json['id']),
       alertType: serializer.fromJson<String>(json['alertType']),
       threshold: serializer.fromJson<double>(json['threshold']),
-      providerType: $AlertRulesTable.$converterproviderTypen.fromJson(
-        serializer.fromJson<String?>(json['providerType']),
-      ),
+      providerType: serializer.fromJson<String?>(json['providerType']),
       accountId: serializer.fromJson<int?>(json['accountId']),
       enabled: serializer.fromJson<bool>(json['enabled']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -3634,9 +3611,7 @@ class AlertRule extends DataClass implements Insertable<AlertRule> {
       'id': serializer.toJson<int>(id),
       'alertType': serializer.toJson<String>(alertType),
       'threshold': serializer.toJson<double>(threshold),
-      'providerType': serializer.toJson<String?>(
-        $AlertRulesTable.$converterproviderTypen.toJson(providerType),
-      ),
+      'providerType': serializer.toJson<String?>(providerType),
       'accountId': serializer.toJson<int?>(accountId),
       'enabled': serializer.toJson<bool>(enabled),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -3647,7 +3622,7 @@ class AlertRule extends DataClass implements Insertable<AlertRule> {
     int? id,
     String? alertType,
     double? threshold,
-    Value<ProviderType?> providerType = const Value.absent(),
+    Value<String?> providerType = const Value.absent(),
     Value<int?> accountId = const Value.absent(),
     bool? enabled,
     DateTime? createdAt,
@@ -3715,7 +3690,7 @@ class AlertRulesCompanion extends UpdateCompanion<AlertRule> {
   final Value<int> id;
   final Value<String> alertType;
   final Value<double> threshold;
-  final Value<ProviderType?> providerType;
+  final Value<String?> providerType;
   final Value<int?> accountId;
   final Value<bool> enabled;
   final Value<DateTime> createdAt;
@@ -3762,7 +3737,7 @@ class AlertRulesCompanion extends UpdateCompanion<AlertRule> {
     Value<int>? id,
     Value<String>? alertType,
     Value<double>? threshold,
-    Value<ProviderType?>? providerType,
+    Value<String?>? providerType,
     Value<int?>? accountId,
     Value<bool>? enabled,
     Value<DateTime>? createdAt,
@@ -3791,9 +3766,7 @@ class AlertRulesCompanion extends UpdateCompanion<AlertRule> {
       map['threshold'] = Variable<double>(threshold.value);
     }
     if (providerType.present) {
-      map['provider_type'] = Variable<String>(
-        $AlertRulesTable.$converterproviderTypen.toSql(providerType.value),
-      );
+      map['provider_type'] = Variable<String>(providerType.value);
     }
     if (accountId.present) {
       map['account_id'] = Variable<int>(accountId.value);
@@ -4103,19 +4076,19 @@ class $ProviderCapabilitiesTable extends ProviderCapabilities
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _providerTypeMeta = const VerificationMeta(
+    'providerType',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<ProviderType, String>
-  providerType =
-      GeneratedColumn<String>(
-        'provider_type',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-        defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
-      ).withConverter<ProviderType>(
-        $ProviderCapabilitiesTable.$converterproviderType,
-      );
+  late final GeneratedColumn<String> providerType = GeneratedColumn<String>(
+    'provider_type',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _supportsBalanceQueryMeta =
       const VerificationMeta('supportsBalanceQuery');
   @override
@@ -4238,6 +4211,17 @@ class $ProviderCapabilitiesTable extends ProviderCapabilities
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
+    if (data.containsKey('provider_type')) {
+      context.handle(
+        _providerTypeMeta,
+        providerType.isAcceptableOrUnknown(
+          data['provider_type']!,
+          _providerTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_providerTypeMeta);
+    }
     if (data.containsKey('supports_balance_query')) {
       context.handle(
         _supportsBalanceQueryMeta,
@@ -4311,12 +4295,10 @@ class $ProviderCapabilitiesTable extends ProviderCapabilities
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
-      providerType: $ProviderCapabilitiesTable.$converterproviderType.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}provider_type'],
-        )!,
-      ),
+      providerType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_type'],
+      )!,
       supportsBalanceQuery: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}supports_balance_query'],
@@ -4352,17 +4334,12 @@ class $ProviderCapabilitiesTable extends ProviderCapabilities
   $ProviderCapabilitiesTable createAlias(String alias) {
     return $ProviderCapabilitiesTable(attachedDatabase, alias);
   }
-
-  static JsonTypeConverter2<ProviderType, String, String>
-  $converterproviderType = const EnumNameConverter<ProviderType>(
-    ProviderType.values,
-  );
 }
 
 class ProviderCapability extends DataClass
     implements Insertable<ProviderCapability> {
   final int id;
-  final ProviderType providerType;
+  final String providerType;
   final bool supportsBalanceQuery;
   final bool supportsModelList;
   final bool supportsUsageParsing;
@@ -4385,11 +4362,7 @@ class ProviderCapability extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    {
-      map['provider_type'] = Variable<String>(
-        $ProviderCapabilitiesTable.$converterproviderType.toSql(providerType),
-      );
-    }
+    map['provider_type'] = Variable<String>(providerType);
     map['supports_balance_query'] = Variable<bool>(supportsBalanceQuery);
     map['supports_model_list'] = Variable<bool>(supportsModelList);
     map['supports_usage_parsing'] = Variable<bool>(supportsUsageParsing);
@@ -4425,9 +4398,7 @@ class ProviderCapability extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return ProviderCapability(
       id: serializer.fromJson<int>(json['id']),
-      providerType: $ProviderCapabilitiesTable.$converterproviderType.fromJson(
-        serializer.fromJson<String>(json['providerType']),
-      ),
+      providerType: serializer.fromJson<String>(json['providerType']),
       supportsBalanceQuery: serializer.fromJson<bool>(
         json['supportsBalanceQuery'],
       ),
@@ -4448,9 +4419,7 @@ class ProviderCapability extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'providerType': serializer.toJson<String>(
-        $ProviderCapabilitiesTable.$converterproviderType.toJson(providerType),
-      ),
+      'providerType': serializer.toJson<String>(providerType),
       'supportsBalanceQuery': serializer.toJson<bool>(supportsBalanceQuery),
       'supportsModelList': serializer.toJson<bool>(supportsModelList),
       'supportsUsageParsing': serializer.toJson<bool>(supportsUsageParsing),
@@ -4463,7 +4432,7 @@ class ProviderCapability extends DataClass
 
   ProviderCapability copyWith({
     int? id,
-    ProviderType? providerType,
+    String? providerType,
     bool? supportsBalanceQuery,
     bool? supportsModelList,
     bool? supportsUsageParsing,
@@ -4558,7 +4527,7 @@ class ProviderCapability extends DataClass
 class ProviderCapabilitiesCompanion
     extends UpdateCompanion<ProviderCapability> {
   final Value<int> id;
-  final Value<ProviderType> providerType;
+  final Value<String> providerType;
   final Value<bool> supportsBalanceQuery;
   final Value<bool> supportsModelList;
   final Value<bool> supportsUsageParsing;
@@ -4579,7 +4548,7 @@ class ProviderCapabilitiesCompanion
   });
   ProviderCapabilitiesCompanion.insert({
     this.id = const Value.absent(),
-    required ProviderType providerType,
+    required String providerType,
     this.supportsBalanceQuery = const Value.absent(),
     this.supportsModelList = const Value.absent(),
     this.supportsUsageParsing = const Value.absent(),
@@ -4617,7 +4586,7 @@ class ProviderCapabilitiesCompanion
 
   ProviderCapabilitiesCompanion copyWith({
     Value<int>? id,
-    Value<ProviderType>? providerType,
+    Value<String>? providerType,
     Value<bool>? supportsBalanceQuery,
     Value<bool>? supportsModelList,
     Value<bool>? supportsUsageParsing,
@@ -4646,11 +4615,7 @@ class ProviderCapabilitiesCompanion
       map['id'] = Variable<int>(id.value);
     }
     if (providerType.present) {
-      map['provider_type'] = Variable<String>(
-        $ProviderCapabilitiesTable.$converterproviderType.toSql(
-          providerType.value,
-        ),
-      );
+      map['provider_type'] = Variable<String>(providerType.value);
     }
     if (supportsBalanceQuery.present) {
       map['supports_balance_query'] = Variable<bool>(
@@ -5137,36 +5102,42 @@ class $ProxyRuntimeLogsTable extends ProxyRuntimeLogs
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _eventTypeMeta = const VerificationMeta(
+    'eventType',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<ProxyRuntimeEventType, String>
-  eventType =
-      GeneratedColumn<String>(
-        'event_type',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<ProxyRuntimeEventType>(
-        $ProxyRuntimeLogsTable.$convertereventType,
-      );
+  late final GeneratedColumn<String> eventType = GeneratedColumn<String>(
+    'event_type',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _previousStateMeta = const VerificationMeta(
+    'previousState',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<ProxyState?, String>
-  previousState = GeneratedColumn<String>(
+  late final GeneratedColumn<String> previousState = GeneratedColumn<String>(
     'previous_state',
     aliasedName,
     true,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-  ).withConverter<ProxyState?>($ProxyRuntimeLogsTable.$converterpreviousStaten);
+  );
+  static const VerificationMeta _nextStateMeta = const VerificationMeta(
+    'nextState',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<ProxyState?, String> nextState =
-      GeneratedColumn<String>(
-        'next_state',
-        aliasedName,
-        true,
-        type: DriftSqlType.string,
-        requiredDuringInsert: false,
-      ).withConverter<ProxyState?>($ProxyRuntimeLogsTable.$converternextStaten);
+  late final GeneratedColumn<String> nextState = GeneratedColumn<String>(
+    'next_state',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 30),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _schemeMeta = const VerificationMeta('scheme');
   @override
   late final GeneratedColumn<String> scheme = GeneratedColumn<String>(
@@ -5256,6 +5227,29 @@ class $ProxyRuntimeLogsTable extends ProxyRuntimeLogs
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
+    if (data.containsKey('event_type')) {
+      context.handle(
+        _eventTypeMeta,
+        eventType.isAcceptableOrUnknown(data['event_type']!, _eventTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventTypeMeta);
+    }
+    if (data.containsKey('previous_state')) {
+      context.handle(
+        _previousStateMeta,
+        previousState.isAcceptableOrUnknown(
+          data['previous_state']!,
+          _previousStateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_state')) {
+      context.handle(
+        _nextStateMeta,
+        nextState.isAcceptableOrUnknown(data['next_state']!, _nextStateMeta),
+      );
+    }
     if (data.containsKey('scheme')) {
       context.handle(
         _schemeMeta,
@@ -5308,23 +5302,17 @@ class $ProxyRuntimeLogsTable extends ProxyRuntimeLogs
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
-      eventType: $ProxyRuntimeLogsTable.$convertereventType.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}event_type'],
-        )!,
+      eventType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_type'],
+      )!,
+      previousState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_state'],
       ),
-      previousState: $ProxyRuntimeLogsTable.$converterpreviousStaten.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}previous_state'],
-        ),
-      ),
-      nextState: $ProxyRuntimeLogsTable.$converternextStaten.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}next_state'],
-        ),
+      nextState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}next_state'],
       ),
       scheme: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -5357,30 +5345,13 @@ class $ProxyRuntimeLogsTable extends ProxyRuntimeLogs
   $ProxyRuntimeLogsTable createAlias(String alias) {
     return $ProxyRuntimeLogsTable(attachedDatabase, alias);
   }
-
-  static JsonTypeConverter2<ProxyRuntimeEventType, String, String>
-  $convertereventType = const EnumNameConverter<ProxyRuntimeEventType>(
-    ProxyRuntimeEventType.values,
-  );
-  static JsonTypeConverter2<ProxyState, String, String>
-  $converterpreviousState = const EnumNameConverter<ProxyState>(
-    ProxyState.values,
-  );
-  static JsonTypeConverter2<ProxyState?, String?, String?>
-  $converterpreviousStaten = JsonTypeConverter2.asNullable(
-    $converterpreviousState,
-  );
-  static JsonTypeConverter2<ProxyState, String, String> $converternextState =
-      const EnumNameConverter<ProxyState>(ProxyState.values);
-  static JsonTypeConverter2<ProxyState?, String?, String?>
-  $converternextStaten = JsonTypeConverter2.asNullable($converternextState);
 }
 
 class ProxyRuntimeLog extends DataClass implements Insertable<ProxyRuntimeLog> {
   final int id;
-  final ProxyRuntimeEventType eventType;
-  final ProxyState? previousState;
-  final ProxyState? nextState;
+  final String eventType;
+  final String? previousState;
+  final String? nextState;
   final String? scheme;
   final String? host;
   final int? port;
@@ -5403,20 +5374,12 @@ class ProxyRuntimeLog extends DataClass implements Insertable<ProxyRuntimeLog> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    {
-      map['event_type'] = Variable<String>(
-        $ProxyRuntimeLogsTable.$convertereventType.toSql(eventType),
-      );
-    }
+    map['event_type'] = Variable<String>(eventType);
     if (!nullToAbsent || previousState != null) {
-      map['previous_state'] = Variable<String>(
-        $ProxyRuntimeLogsTable.$converterpreviousStaten.toSql(previousState),
-      );
+      map['previous_state'] = Variable<String>(previousState);
     }
     if (!nullToAbsent || nextState != null) {
-      map['next_state'] = Variable<String>(
-        $ProxyRuntimeLogsTable.$converternextStaten.toSql(nextState),
-      );
+      map['next_state'] = Variable<String>(nextState);
     }
     if (!nullToAbsent || scheme != null) {
       map['scheme'] = Variable<String>(scheme);
@@ -5469,15 +5432,9 @@ class ProxyRuntimeLog extends DataClass implements Insertable<ProxyRuntimeLog> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return ProxyRuntimeLog(
       id: serializer.fromJson<int>(json['id']),
-      eventType: $ProxyRuntimeLogsTable.$convertereventType.fromJson(
-        serializer.fromJson<String>(json['eventType']),
-      ),
-      previousState: $ProxyRuntimeLogsTable.$converterpreviousStaten.fromJson(
-        serializer.fromJson<String?>(json['previousState']),
-      ),
-      nextState: $ProxyRuntimeLogsTable.$converternextStaten.fromJson(
-        serializer.fromJson<String?>(json['nextState']),
-      ),
+      eventType: serializer.fromJson<String>(json['eventType']),
+      previousState: serializer.fromJson<String?>(json['previousState']),
+      nextState: serializer.fromJson<String?>(json['nextState']),
       scheme: serializer.fromJson<String?>(json['scheme']),
       host: serializer.fromJson<String?>(json['host']),
       port: serializer.fromJson<int?>(json['port']),
@@ -5491,15 +5448,9 @@ class ProxyRuntimeLog extends DataClass implements Insertable<ProxyRuntimeLog> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'eventType': serializer.toJson<String>(
-        $ProxyRuntimeLogsTable.$convertereventType.toJson(eventType),
-      ),
-      'previousState': serializer.toJson<String?>(
-        $ProxyRuntimeLogsTable.$converterpreviousStaten.toJson(previousState),
-      ),
-      'nextState': serializer.toJson<String?>(
-        $ProxyRuntimeLogsTable.$converternextStaten.toJson(nextState),
-      ),
+      'eventType': serializer.toJson<String>(eventType),
+      'previousState': serializer.toJson<String?>(previousState),
+      'nextState': serializer.toJson<String?>(nextState),
       'scheme': serializer.toJson<String?>(scheme),
       'host': serializer.toJson<String?>(host),
       'port': serializer.toJson<int?>(port),
@@ -5511,9 +5462,9 @@ class ProxyRuntimeLog extends DataClass implements Insertable<ProxyRuntimeLog> {
 
   ProxyRuntimeLog copyWith({
     int? id,
-    ProxyRuntimeEventType? eventType,
-    Value<ProxyState?> previousState = const Value.absent(),
-    Value<ProxyState?> nextState = const Value.absent(),
+    String? eventType,
+    Value<String?> previousState = const Value.absent(),
+    Value<String?> nextState = const Value.absent(),
     Value<String?> scheme = const Value.absent(),
     Value<String?> host = const Value.absent(),
     Value<int?> port = const Value.absent(),
@@ -5601,9 +5552,9 @@ class ProxyRuntimeLog extends DataClass implements Insertable<ProxyRuntimeLog> {
 
 class ProxyRuntimeLogsCompanion extends UpdateCompanion<ProxyRuntimeLog> {
   final Value<int> id;
-  final Value<ProxyRuntimeEventType> eventType;
-  final Value<ProxyState?> previousState;
-  final Value<ProxyState?> nextState;
+  final Value<String> eventType;
+  final Value<String?> previousState;
+  final Value<String?> nextState;
   final Value<String?> scheme;
   final Value<String?> host;
   final Value<int?> port;
@@ -5624,7 +5575,7 @@ class ProxyRuntimeLogsCompanion extends UpdateCompanion<ProxyRuntimeLog> {
   });
   ProxyRuntimeLogsCompanion.insert({
     this.id = const Value.absent(),
-    required ProxyRuntimeEventType eventType,
+    required String eventType,
     this.previousState = const Value.absent(),
     this.nextState = const Value.absent(),
     this.scheme = const Value.absent(),
@@ -5662,9 +5613,9 @@ class ProxyRuntimeLogsCompanion extends UpdateCompanion<ProxyRuntimeLog> {
 
   ProxyRuntimeLogsCompanion copyWith({
     Value<int>? id,
-    Value<ProxyRuntimeEventType>? eventType,
-    Value<ProxyState?>? previousState,
-    Value<ProxyState?>? nextState,
+    Value<String>? eventType,
+    Value<String?>? previousState,
+    Value<String?>? nextState,
     Value<String?>? scheme,
     Value<String?>? host,
     Value<int?>? port,
@@ -5693,21 +5644,13 @@ class ProxyRuntimeLogsCompanion extends UpdateCompanion<ProxyRuntimeLog> {
       map['id'] = Variable<int>(id.value);
     }
     if (eventType.present) {
-      map['event_type'] = Variable<String>(
-        $ProxyRuntimeLogsTable.$convertereventType.toSql(eventType.value),
-      );
+      map['event_type'] = Variable<String>(eventType.value);
     }
     if (previousState.present) {
-      map['previous_state'] = Variable<String>(
-        $ProxyRuntimeLogsTable.$converterpreviousStaten.toSql(
-          previousState.value,
-        ),
-      );
+      map['previous_state'] = Variable<String>(previousState.value);
     }
     if (nextState.present) {
-      map['next_state'] = Variable<String>(
-        $ProxyRuntimeLogsTable.$converternextStaten.toSql(nextState.value),
-      );
+      map['next_state'] = Variable<String>(nextState.value);
     }
     if (scheme.present) {
       map['scheme'] = Variable<String>(scheme.value);
@@ -5786,7 +5729,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$AccountsTableCreateCompanionBuilder =
     AccountsCompanion Function({
       Value<int> id,
-      required ProviderType providerType,
+      required String providerType,
       required String displayName,
       required String baseUrl,
       Value<String?> apiKeyAlias,
@@ -5799,7 +5742,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
 typedef $$AccountsTableUpdateCompanionBuilder =
     AccountsCompanion Function({
       Value<int> id,
-      Value<ProviderType> providerType,
+      Value<String> providerType,
       Value<String> displayName,
       Value<String> baseUrl,
       Value<String?> apiKeyAlias,
@@ -5888,10 +5831,9 @@ class $$AccountsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<ProviderType, ProviderType, String>
-  get providerType => $composableBuilder(
+  ColumnFilters<String> get providerType => $composableBuilder(
     column: $table.providerType,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get displayName => $composableBuilder(
@@ -6082,11 +6024,10 @@ class $$AccountsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<ProviderType, String> get providerType =>
-      $composableBuilder(
-        column: $table.providerType,
-        builder: (column) => column,
-      );
+  GeneratedColumn<String> get providerType => $composableBuilder(
+    column: $table.providerType,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get displayName => $composableBuilder(
     column: $table.displayName,
@@ -6227,7 +6168,7 @@ class $$AccountsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<ProviderType> providerType = const Value.absent(),
+                Value<String> providerType = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
                 Value<String> baseUrl = const Value.absent(),
                 Value<String?> apiKeyAlias = const Value.absent(),
@@ -6251,7 +6192,7 @@ class $$AccountsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required ProviderType providerType,
+                required String providerType,
                 required String displayName,
                 required String baseUrl,
                 Value<String?> apiKeyAlias = const Value.absent(),
@@ -6837,7 +6778,7 @@ typedef $$UsageLogsTableCreateCompanionBuilder =
     UsageLogsCompanion Function({
       Value<int> id,
       required int accountId,
-      required ProviderType providerType,
+      required String providerType,
       required String modelName,
       required DateTime requestTime,
       Value<int?> promptTokens,
@@ -6851,16 +6792,16 @@ typedef $$UsageLogsTableCreateCompanionBuilder =
       Value<double?> cost,
       required String currency,
       Value<int?> statusCode,
-      required RequestStatus requestStatus,
+      required String requestStatus,
       Value<String?> errorMessage,
-      required UsageSource source,
+      required String source,
       Value<DateTime> createdAt,
     });
 typedef $$UsageLogsTableUpdateCompanionBuilder =
     UsageLogsCompanion Function({
       Value<int> id,
       Value<int> accountId,
-      Value<ProviderType> providerType,
+      Value<String> providerType,
       Value<String> modelName,
       Value<DateTime> requestTime,
       Value<int?> promptTokens,
@@ -6874,9 +6815,9 @@ typedef $$UsageLogsTableUpdateCompanionBuilder =
       Value<double?> cost,
       Value<String> currency,
       Value<int?> statusCode,
-      Value<RequestStatus> requestStatus,
+      Value<String> requestStatus,
       Value<String?> errorMessage,
-      Value<UsageSource> source,
+      Value<String> source,
       Value<DateTime> createdAt,
     });
 
@@ -6918,10 +6859,9 @@ class $$UsageLogsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<ProviderType, ProviderType, String>
-  get providerType => $composableBuilder(
+  ColumnFilters<String> get providerType => $composableBuilder(
     column: $table.providerType,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get modelName => $composableBuilder(
@@ -6989,10 +6929,9 @@ class $$UsageLogsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<RequestStatus, RequestStatus, String>
-  get requestStatus => $composableBuilder(
+  ColumnFilters<String> get requestStatus => $composableBuilder(
     column: $table.requestStatus,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get errorMessage => $composableBuilder(
@@ -7000,11 +6939,10 @@ class $$UsageLogsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<UsageSource, UsageSource, String> get source =>
-      $composableBuilder(
-        column: $table.source,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
@@ -7175,11 +7113,10 @@ class $$UsageLogsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<ProviderType, String> get providerType =>
-      $composableBuilder(
-        column: $table.providerType,
-        builder: (column) => column,
-      );
+  GeneratedColumn<String> get providerType => $composableBuilder(
+    column: $table.providerType,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get modelName =>
       $composableBuilder(column: $table.modelName, builder: (column) => column);
@@ -7238,18 +7175,17 @@ class $$UsageLogsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumnWithTypeConverter<RequestStatus, String> get requestStatus =>
-      $composableBuilder(
-        column: $table.requestStatus,
-        builder: (column) => column,
-      );
+  GeneratedColumn<String> get requestStatus => $composableBuilder(
+    column: $table.requestStatus,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get errorMessage => $composableBuilder(
     column: $table.errorMessage,
     builder: (column) => column,
   );
 
-  GeneratedColumnWithTypeConverter<UsageSource, String> get source =>
+  GeneratedColumn<String> get source =>
       $composableBuilder(column: $table.source, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
@@ -7309,7 +7245,7 @@ class $$UsageLogsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> accountId = const Value.absent(),
-                Value<ProviderType> providerType = const Value.absent(),
+                Value<String> providerType = const Value.absent(),
                 Value<String> modelName = const Value.absent(),
                 Value<DateTime> requestTime = const Value.absent(),
                 Value<int?> promptTokens = const Value.absent(),
@@ -7323,9 +7259,9 @@ class $$UsageLogsTableTableManager
                 Value<double?> cost = const Value.absent(),
                 Value<String> currency = const Value.absent(),
                 Value<int?> statusCode = const Value.absent(),
-                Value<RequestStatus> requestStatus = const Value.absent(),
+                Value<String> requestStatus = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
-                Value<UsageSource> source = const Value.absent(),
+                Value<String> source = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => UsageLogsCompanion(
                 id: id,
@@ -7353,7 +7289,7 @@ class $$UsageLogsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required int accountId,
-                required ProviderType providerType,
+                required String providerType,
                 required String modelName,
                 required DateTime requestTime,
                 Value<int?> promptTokens = const Value.absent(),
@@ -7367,9 +7303,9 @@ class $$UsageLogsTableTableManager
                 Value<double?> cost = const Value.absent(),
                 required String currency,
                 Value<int?> statusCode = const Value.absent(),
-                required RequestStatus requestStatus,
+                required String requestStatus,
                 Value<String?> errorMessage = const Value.absent(),
-                required UsageSource source,
+                required String source,
                 Value<DateTime> createdAt = const Value.absent(),
               }) => UsageLogsCompanion.insert(
                 id: id,
@@ -7463,7 +7399,7 @@ typedef $$UsageLogsTableProcessedTableManager =
 typedef $$ModelPricesTableCreateCompanionBuilder =
     ModelPricesCompanion Function({
       Value<int> id,
-      required ProviderType providerType,
+      required String providerType,
       required String modelName,
       required double inputPricePer1M,
       required double outputPricePer1M,
@@ -7480,7 +7416,7 @@ typedef $$ModelPricesTableCreateCompanionBuilder =
 typedef $$ModelPricesTableUpdateCompanionBuilder =
     ModelPricesCompanion Function({
       Value<int> id,
-      Value<ProviderType> providerType,
+      Value<String> providerType,
       Value<String> modelName,
       Value<double> inputPricePer1M,
       Value<double> outputPricePer1M,
@@ -7509,10 +7445,9 @@ class $$ModelPricesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<ProviderType, ProviderType, String>
-  get providerType => $composableBuilder(
+  ColumnFilters<String> get providerType => $composableBuilder(
     column: $table.providerType,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get modelName => $composableBuilder(
@@ -7668,11 +7603,10 @@ class $$ModelPricesTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<ProviderType, String> get providerType =>
-      $composableBuilder(
-        column: $table.providerType,
-        builder: (column) => column,
-      );
+  GeneratedColumn<String> get providerType => $composableBuilder(
+    column: $table.providerType,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get modelName =>
       $composableBuilder(column: $table.modelName, builder: (column) => column);
@@ -7759,7 +7693,7 @@ class $$ModelPricesTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<ProviderType> providerType = const Value.absent(),
+                Value<String> providerType = const Value.absent(),
                 Value<String> modelName = const Value.absent(),
                 Value<double> inputPricePer1M = const Value.absent(),
                 Value<double> outputPricePer1M = const Value.absent(),
@@ -7791,7 +7725,7 @@ class $$ModelPricesTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required ProviderType providerType,
+                required String providerType,
                 required String modelName,
                 required double inputPricePer1M,
                 required double outputPricePer1M,
@@ -7850,7 +7784,7 @@ typedef $$AlertRulesTableCreateCompanionBuilder =
       Value<int> id,
       required String alertType,
       required double threshold,
-      Value<ProviderType?> providerType,
+      Value<String?> providerType,
       Value<int?> accountId,
       Value<bool> enabled,
       Value<DateTime> createdAt,
@@ -7860,7 +7794,7 @@ typedef $$AlertRulesTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> alertType,
       Value<double> threshold,
-      Value<ProviderType?> providerType,
+      Value<String?> providerType,
       Value<int?> accountId,
       Value<bool> enabled,
       Value<DateTime> createdAt,
@@ -7914,10 +7848,9 @@ class $$AlertRulesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<ProviderType?, ProviderType, String>
-  get providerType => $composableBuilder(
+  ColumnFilters<String> get providerType => $composableBuilder(
     column: $table.providerType,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<bool> get enabled => $composableBuilder(
@@ -8035,11 +7968,10 @@ class $$AlertRulesTableAnnotationComposer
   GeneratedColumn<double> get threshold =>
       $composableBuilder(column: $table.threshold, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<ProviderType?, String> get providerType =>
-      $composableBuilder(
-        column: $table.providerType,
-        builder: (column) => column,
-      );
+  GeneratedColumn<String> get providerType => $composableBuilder(
+    column: $table.providerType,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get enabled =>
       $composableBuilder(column: $table.enabled, builder: (column) => column);
@@ -8102,7 +8034,7 @@ class $$AlertRulesTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> alertType = const Value.absent(),
                 Value<double> threshold = const Value.absent(),
-                Value<ProviderType?> providerType = const Value.absent(),
+                Value<String?> providerType = const Value.absent(),
                 Value<int?> accountId = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -8120,7 +8052,7 @@ class $$AlertRulesTableTableManager
                 Value<int> id = const Value.absent(),
                 required String alertType,
                 required double threshold,
-                Value<ProviderType?> providerType = const Value.absent(),
+                Value<String?> providerType = const Value.absent(),
                 Value<int?> accountId = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -8365,7 +8297,7 @@ typedef $$AppSettingsTableProcessedTableManager =
 typedef $$ProviderCapabilitiesTableCreateCompanionBuilder =
     ProviderCapabilitiesCompanion Function({
       Value<int> id,
-      required ProviderType providerType,
+      required String providerType,
       Value<bool> supportsBalanceQuery,
       Value<bool> supportsModelList,
       Value<bool> supportsUsageParsing,
@@ -8377,7 +8309,7 @@ typedef $$ProviderCapabilitiesTableCreateCompanionBuilder =
 typedef $$ProviderCapabilitiesTableUpdateCompanionBuilder =
     ProviderCapabilitiesCompanion Function({
       Value<int> id,
-      Value<ProviderType> providerType,
+      Value<String> providerType,
       Value<bool> supportsBalanceQuery,
       Value<bool> supportsModelList,
       Value<bool> supportsUsageParsing,
@@ -8401,10 +8333,9 @@ class $$ProviderCapabilitiesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<ProviderType, ProviderType, String>
-  get providerType => $composableBuilder(
+  ColumnFilters<String> get providerType => $composableBuilder(
     column: $table.providerType,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<bool> get supportsBalanceQuery => $composableBuilder(
@@ -8510,11 +8441,10 @@ class $$ProviderCapabilitiesTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<ProviderType, String> get providerType =>
-      $composableBuilder(
-        column: $table.providerType,
-        builder: (column) => column,
-      );
+  GeneratedColumn<String> get providerType => $composableBuilder(
+    column: $table.providerType,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get supportsBalanceQuery => $composableBuilder(
     column: $table.supportsBalanceQuery,
@@ -8594,7 +8524,7 @@ class $$ProviderCapabilitiesTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<ProviderType> providerType = const Value.absent(),
+                Value<String> providerType = const Value.absent(),
                 Value<bool> supportsBalanceQuery = const Value.absent(),
                 Value<bool> supportsModelList = const Value.absent(),
                 Value<bool> supportsUsageParsing = const Value.absent(),
@@ -8616,7 +8546,7 @@ class $$ProviderCapabilitiesTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required ProviderType providerType,
+                required String providerType,
                 Value<bool> supportsBalanceQuery = const Value.absent(),
                 Value<bool> supportsModelList = const Value.absent(),
                 Value<bool> supportsUsageParsing = const Value.absent(),
@@ -8902,9 +8832,9 @@ typedef $$SchemaMigrationLogsTableProcessedTableManager =
 typedef $$ProxyRuntimeLogsTableCreateCompanionBuilder =
     ProxyRuntimeLogsCompanion Function({
       Value<int> id,
-      required ProxyRuntimeEventType eventType,
-      Value<ProxyState?> previousState,
-      Value<ProxyState?> nextState,
+      required String eventType,
+      Value<String?> previousState,
+      Value<String?> nextState,
       Value<String?> scheme,
       Value<String?> host,
       Value<int?> port,
@@ -8915,9 +8845,9 @@ typedef $$ProxyRuntimeLogsTableCreateCompanionBuilder =
 typedef $$ProxyRuntimeLogsTableUpdateCompanionBuilder =
     ProxyRuntimeLogsCompanion Function({
       Value<int> id,
-      Value<ProxyRuntimeEventType> eventType,
-      Value<ProxyState?> previousState,
-      Value<ProxyState?> nextState,
+      Value<String> eventType,
+      Value<String?> previousState,
+      Value<String?> nextState,
       Value<String?> scheme,
       Value<String?> host,
       Value<int?> port,
@@ -8940,26 +8870,19 @@ class $$ProxyRuntimeLogsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<
-    ProxyRuntimeEventType,
-    ProxyRuntimeEventType,
-    String
-  >
-  get eventType => $composableBuilder(
+  ColumnFilters<String> get eventType => $composableBuilder(
     column: $table.eventType,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<ProxyState?, ProxyState, String>
-  get previousState => $composableBuilder(
+  ColumnFilters<String> get previousState => $composableBuilder(
     column: $table.previousState,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<ProxyState?, ProxyState, String>
-  get nextState => $composableBuilder(
+  ColumnFilters<String> get nextState => $composableBuilder(
     column: $table.nextState,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get scheme => $composableBuilder(
@@ -9065,17 +8988,15 @@ class $$ProxyRuntimeLogsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<ProxyRuntimeEventType, String>
-  get eventType =>
+  GeneratedColumn<String> get eventType =>
       $composableBuilder(column: $table.eventType, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<ProxyState?, String> get previousState =>
-      $composableBuilder(
-        column: $table.previousState,
-        builder: (column) => column,
-      );
+  GeneratedColumn<String> get previousState => $composableBuilder(
+    column: $table.previousState,
+    builder: (column) => column,
+  );
 
-  GeneratedColumnWithTypeConverter<ProxyState?, String> get nextState =>
+  GeneratedColumn<String> get nextState =>
       $composableBuilder(column: $table.nextState, builder: (column) => column);
 
   GeneratedColumn<String> get scheme =>
@@ -9137,9 +9058,9 @@ class $$ProxyRuntimeLogsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<ProxyRuntimeEventType> eventType = const Value.absent(),
-                Value<ProxyState?> previousState = const Value.absent(),
-                Value<ProxyState?> nextState = const Value.absent(),
+                Value<String> eventType = const Value.absent(),
+                Value<String?> previousState = const Value.absent(),
+                Value<String?> nextState = const Value.absent(),
                 Value<String?> scheme = const Value.absent(),
                 Value<String?> host = const Value.absent(),
                 Value<int?> port = const Value.absent(),
@@ -9161,9 +9082,9 @@ class $$ProxyRuntimeLogsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required ProxyRuntimeEventType eventType,
-                Value<ProxyState?> previousState = const Value.absent(),
-                Value<ProxyState?> nextState = const Value.absent(),
+                required String eventType,
+                Value<String?> previousState = const Value.absent(),
+                Value<String?> nextState = const Value.absent(),
                 Value<String?> scheme = const Value.absent(),
                 Value<String?> host = const Value.absent(),
                 Value<int?> port = const Value.absent(),

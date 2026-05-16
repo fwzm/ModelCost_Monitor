@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
@@ -6,6 +7,10 @@ import '../../providers/providers.dart';
 import '../../data/database/database.dart';
 import '../../core/models/models.dart';
 import '../../core/proxy/proxy_isolate.dart';
+import '../theme/app_theme.dart';
+import 'accounts_page.dart';
+import 'help_page.dart';
+import 'pricing_page.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -27,7 +32,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       if (mounted) {
         final l10n = L10nLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('\${l10n.errorStartingProxy}: \$error')),
+          SnackBar(content: Text('${l10n.errorStartingProxy}: $error')),
         );
       }
     };
@@ -44,20 +49,20 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final settings = ref.read(settingsServiceProvider);
     final host = await settings.getProxyHost();
     final port = await settings.getProxyPort();
+    final httpsEnabled = await settings.isHttpsEnabled();
     if (mounted) {
       setState(() {
-        _proxyUrl = 'http://\$host:\$port';
+        _proxyUrl = '${httpsEnabled ? 'https' : 'http'}://$host:$port';
       });
     }
   }
 
   void _handleProxyEvent(ProxyStatusEvent event) {
     if (!mounted) return;
-    final l10n = L10nLocalizations.of(context);
     setState(() {
       if (event is ProxyStarted) {
         _proxyState = ProxyState.running;
-        _proxyUrl = 'http://\${event.host}:\${event.port}';
+        _proxyUrl = '${event.scheme}://${event.host}:${event.port}';
       } else if (event is ProxyStopped) {
         _proxyState = ProxyState.stopped;
       } else if (event is ProxyError) {
@@ -83,42 +88,53 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       final host = await settings.getProxyHost();
       final port = await settings.getProxyPort();
       final corsEnabled = await settings.isCorsEnabled();
+      final httpsEnabled = await settings.isHttpsEnabled();
 
       final accountConfigs = <AccountConfig>[];
       for (final account in accounts) {
         if (account.enabled && account.proxyEnabled) {
           final apiKey = await accountService.getApiKey(account.id);
           if (apiKey != null) {
-            accountConfigs.add(AccountConfig(
-              accountId: account.id,
-              providerType: account.providerType,
-              displayName: account.displayName,
-              baseUrl: account.baseUrl,
-              apiKeyAlias: account.apiKeyAlias,
-              apiKey: apiKey,
-              currency: account.currency,
-              enabled: account.enabled,
-              proxyEnabled: account.proxyEnabled,
-            ));
+            accountConfigs.add(
+              AccountConfig(
+                accountId: account.id,
+                providerType: ProviderType.values.firstWhere(
+                  (e) => e.name == account.providerType,
+                  orElse: () => ProviderType.customOpenAI,
+                ),
+                displayName: account.displayName,
+                baseUrl: account.baseUrl,
+                apiKeyAlias: account.apiKeyAlias,
+                apiKey: apiKey,
+                currency: account.currency,
+                enabled: account.enabled,
+                proxyEnabled: account.proxyEnabled,
+              ),
+            );
           }
         }
       }
 
       final priceConfigs = prices
-          .map((p) => ModelPriceConfig(
-                providerType: p.providerType,
-                modelName: p.modelName,
-                inputPricePer1M: p.inputPricePer1M,
-                outputPricePer1M: p.outputPricePer1M,
-                cachedInputPricePer1M: p.cachedInputPricePer1M,
-                reasoningOutputPricePer1M: p.reasoningOutputPricePer1M,
-                currency: p.currency,
-              ))
+          .map(
+            (p) => ModelPriceConfig(
+              providerType: ProviderType.values.firstWhere(
+                (e) => e.name == p.providerType,
+                orElse: () => ProviderType.customOpenAI,
+              ),
+              modelName: p.modelName,
+              inputPricePer1M: p.inputPricePer1M,
+              outputPricePer1M: p.outputPricePer1M,
+              cachedInputPricePer1M: p.cachedInputPricePer1M,
+              reasoningOutputPricePer1M: p.reasoningOutputPricePer1M,
+              currency: p.currency,
+            ),
+          )
           .toList();
 
       final settingsConfig = ProxySettings(
         enableCors: corsEnabled,
-        enableHttps: false,
+        enableHttps: httpsEnabled,
         enableTokenizerFallback: true,
         requestTimeoutPolicy: 'streamingCompletion',
         uiRefreshIntervalMs: 500,
@@ -131,25 +147,25 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         port: port,
         accounts: accountConfigs,
         prices: priceConfigs,
-        routes: [],
+        routes: _buildDefaultRoutes(accountConfigs),
         settings: settingsConfig,
       );
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.proxyStarted)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.proxyStarted)));
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.proxyStartFailed)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.proxyStartFailed)));
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('\${l10n.errorStartingProxy}: \$e')),
+          SnackBar(content: Text('${l10n.errorStartingProxy}: $e')),
         );
       }
     }
@@ -159,18 +175,63 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     await _proxyManager.stop();
   }
 
+  List<ProxyRouteConfig> _buildDefaultRoutes(List<AccountConfig> accounts) {
+    final routes = <ProxyRouteConfig>[];
+    final genericProviderRoutes = <String>{};
+
+    for (final account in accounts) {
+      final accountId = account.accountId;
+      if (accountId == null) continue;
+
+      final providerPath = _providerPath(account.providerType);
+      final accountRoute = '/proxy/$providerPath/$accountId';
+      routes.add(
+        ProxyRouteConfig(
+          pathPrefix: accountRoute,
+          accountId: accountId,
+          targetBaseUrl: account.baseUrl,
+        ),
+      );
+
+      final genericRoute = '/proxy/$providerPath';
+      if (genericProviderRoutes.add(genericRoute)) {
+        routes.add(
+          ProxyRouteConfig(
+            pathPrefix: genericRoute,
+            accountId: accountId,
+            targetBaseUrl: account.baseUrl,
+          ),
+        );
+      }
+    }
+
+    return routes;
+  }
+
+  String _providerPath(ProviderType type) {
+    switch (type) {
+      case ProviderType.customOpenAI:
+        return 'custom';
+      case ProviderType.deepseek:
+      case ProviderType.mimo:
+      case ProviderType.gemini:
+      case ProviderType.openrouter:
+        return type.name;
+    }
+  }
+
   Color _getStateColor() {
     switch (_proxyState) {
       case ProxyState.running:
-        return Colors.green;
+        return AppTheme.success;
       case ProxyState.starting:
-        return Colors.orange;
+        return AppTheme.warning;
       case ProxyState.stopping:
         return Colors.blueGrey;
       case ProxyState.degraded:
-        return Colors.orange;
+        return AppTheme.warning;
       case ProxyState.crashed:
-        return Colors.red;
+        return AppTheme.error;
       case ProxyState.stopped:
         return Colors.grey;
     }
@@ -206,269 +267,559 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       appBar: AppBar(
         title: Text(l10n.appTitle),
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _getStateColor().withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: _getStateColor()),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _getStateColor(),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _getStateText(),
-                        style: TextStyle(color: _getStateColor(), fontSize: 12),
-                      ),
-                    ],
+          _buildProxyControl(l10n),
+          const SizedBox(width: AppTheme.spaceM),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(todayCostProvider);
+          ref.invalidate(monthCostProvider);
+          ref.invalidate(accountsProvider);
+          ref.invalidate(usageLogsProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppTheme.spaceL),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── 代理地址卡片 ──
+              _buildProxyUrlCard(l10n),
+              _buildSetupPanel(accountsAsync, usageLogsAsync, l10n),
+
+              // ── 统计卡片 ──
+              _buildStatsGrid(
+                todayCostAsync,
+                monthCostAsync,
+                accountsAsync,
+                usageLogsAsync,
+              ),
+              const SizedBox(height: AppTheme.spaceXL),
+
+              // ── 最近活动 ──
+              Text(
+                l10n.recentActivity,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppTheme.spaceM),
+              usageLogsAsync.when(
+                data: (logs) => _buildRecentList(logs, l10n),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(),
                   ),
                 ),
-                const SizedBox(width: 8),
-                if (_proxyState == ProxyState.running)
-                  ElevatedButton.icon(
-                    onPressed: _stopProxy,
-                    icon: const Icon(Icons.stop, size: 16),
-                    label: Text(l10n.proxyStop),
-                  )
-                else if (_proxyState == ProxyState.stopped || _proxyState == ProxyState.crashed)
-                  ElevatedButton.icon(
-                    onPressed: _startProxy,
-                    icon: const Icon(Icons.play_arrow, size: 16),
-                    label: Text(l10n.proxyStart),
-                  ),
+                error: (e, _) => Center(child: Text('Error: $e')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── 代理控制区 ──────────────────────────────────────────
+  Widget _buildProxyControl(L10nLocalizations l10n) {
+    final stateColor = _getStateColor();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: stateColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: stateColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: stateColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: stateColor.withValues(alpha: 0.5),
+                  blurRadius: 4,
+                ),
               ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            _getStateText(),
+            style: TextStyle(
+              color: stateColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (_proxyState == ProxyState.running)
+            _proxyButton(l10n.proxyStop, Icons.stop_rounded, _stopProxy)
+          else if (_proxyState == ProxyState.stopped ||
+              _proxyState == ProxyState.crashed)
+            _proxyButton(
+              l10n.proxyStart,
+              Icons.play_arrow_rounded,
+              _startProxy,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _proxyButton(String label, IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── 代理地址卡片 ────────────────────────────────────────
+  Widget _buildProxyUrlCard(L10nLocalizations l10n) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppTheme.spaceL),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusL),
+        boxShadow: AppTheme.shadowM(Theme.of(context).colorScheme.primary),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.swap_horiz_rounded,
+                color: Colors.white70,
+                size: 18,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                l10n.currentProxyUrl,
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const Spacer(),
+              _copyButton(l10n),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            _proxyUrl,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
             ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _copyButton(L10nLocalizations l10n) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: _proxyUrl));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(L10nLocalizations.of(context).addressCopied),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.copy_rounded, color: Colors.white, size: 14),
+              const SizedBox(width: 4),
+              Text(
+                l10n.copy,
+                style: TextStyle(color: Colors.white, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── 统计网格 ────────────────────────────────────────────
+  Widget _buildStatsGrid(
+    AsyncValue<double> todayCost,
+    AsyncValue<double> monthCost,
+    AsyncValue<List<Account>> accounts,
+    AsyncValue<List<UsageLog>> logs,
+  ) {
+    final items = [
+      _StatItem(
+        L10nLocalizations.of(context).todayCost,
+        todayCost.when(
+          data: (v) => '\$${v.toStringAsFixed(4)}',
+          loading: () => '...',
+          error: (_, _) => '-',
+        ),
+        Icons.attach_money_rounded,
+        0,
+      ),
+      _StatItem(
+        L10nLocalizations.of(context).monthCost,
+        monthCost.when(
+          data: (v) => '\$${v.toStringAsFixed(4)}',
+          loading: () => '...',
+          error: (_, _) => '-',
+        ),
+        Icons.calendar_month_rounded,
+        1,
+      ),
+      _StatItem(
+        L10nLocalizations.of(context).totalAccounts,
+        accounts.when(
+          data: (v) => '${v.length}',
+          loading: () => '...',
+          error: (_, _) => '-',
+        ),
+        Icons.cloud_rounded,
+        2,
+      ),
+      _StatItem(
+        L10nLocalizations.of(context).totalRequests,
+        logs.when(
+          data: (v) => '${v.length}',
+          loading: () => '...',
+          error: (_, _) => '-',
+        ),
+        Icons.list_alt_rounded,
+        3,
+      ),
+      _StatItem(
+        L10nLocalizations.of(context).estimatedRecords,
+        '${logs.value?.where((l) => l.estimated).length ?? 0}',
+        Icons.calculate_rounded,
+        4,
+      ),
+      _StatItem(
+        L10nLocalizations.of(context).totalTokens,
+        _formatTokens(logs.value),
+        Icons.data_usage_rounded,
+        5,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columns = width >= 1180
+            ? 6
+            : width >= 760
+            ? 3
+            : 2;
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: columns,
+          crossAxisSpacing: AppTheme.spaceM,
+          mainAxisSpacing: AppTheme.spaceM,
+          childAspectRatio: columns >= 6 ? 1.25 : 1.45,
+          children: items
+              .asMap()
+              .entries
+              .map((e) => _buildGradientStatCard(e.value))
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildSetupPanel(
+    AsyncValue<List<Account>> accounts,
+    AsyncValue<List<UsageLog>> logs,
+    L10nLocalizations l10n,
+  ) {
+    final hasAccounts = accounts.valueOrNull?.isNotEmpty ?? false;
+    final hasLogs = logs.valueOrNull?.isNotEmpty ?? false;
+    if (hasAccounts && hasLogs) {
+      return const SizedBox(height: AppTheme.spaceXL);
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: AppTheme.spaceM,
+        bottom: AppTheme.spaceXL,
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppTheme.spaceL),
+        decoration: BoxDecoration(
+          color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(AppTheme.radiusM),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+          ),
+        ),
+        child: Wrap(
+          spacing: AppTheme.spaceM,
+          runSpacing: AppTheme.spaceM,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.currentProxyUrl,
-                      style: Theme.of(context).textTheme.labelLarge,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.rocket_launch_rounded, color: colorScheme.primary),
+                  const SizedBox(width: AppTheme.spaceM),
+                  Flexible(
+                    child: Text(
+                      hasAccounts
+                          ? l10n.helpStep3StartProxy
+                          : l10n.helpStep1AddAccount,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    SelectableText(
-                      _proxyUrl,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontFamily: 'monospace',
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
+            Wrap(
+              spacing: AppTheme.spaceS,
+              runSpacing: AppTheme.spaceS,
               children: [
-                todayCostAsync.when(
-                  data: (cost) => _buildStatCard(
-                    context,
-                    l10n.todayCost,
-                    '\$\${cost.toStringAsFixed(4)}',
-                    Icons.attach_money,
-                    Colors.green,
+                FilledButton.tonalIcon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AccountsPage()),
                   ),
-                  loading: () => _buildLoadingCard('Loading...'),
-                  error: (e, _) => _buildErrorCard('Error: \$e'),
+                  icon: const Icon(Icons.cloud_rounded),
+                  label: Text(l10n.addAccount),
                 ),
-                monthCostAsync.when(
-                  data: (cost) => _buildStatCard(
-                    context,
-                    l10n.monthCost,
-                    '\$\${cost.toStringAsFixed(4)}',
-                    Icons.calendar_month,
-                    Colors.blue,
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PricingPage()),
                   ),
-                  loading: () => _buildLoadingCard('Loading...'),
-                  error: (e, _) => _buildErrorCard('Error: \$e'),
+                  icon: const Icon(Icons.price_change_rounded),
+                  label: Text(l10n.navPricing),
                 ),
-                accountsAsync.when(
-                  data: (accounts) => _buildStatCard(
+                OutlinedButton.icon(
+                  onPressed: _proxyState == ProxyState.running
+                      ? null
+                      : _startProxy,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: Text(l10n.proxyStart),
+                ),
+                IconButton.filledTonal(
+                  tooltip: l10n.navHelp,
+                  onPressed: () => Navigator.of(
                     context,
-                    l10n.totalAccounts,
-                    '\${accounts.length}',
-                    Icons.cloud,
-                    Colors.purple,
-                  ),
-                  loading: () => _buildLoadingCard('Loading...'),
-                  error: (e, _) => _buildErrorCard('Error: \$e'),
-                ),
-                usageLogsAsync.when(
-                  data: (logs) => _buildStatCard(
-                    context,
-                    l10n.totalRequests,
-                    '\${logs.length}',
-                    Icons.list_alt,
-                    Colors.orange,
-                  ),
-                  loading: () => _buildLoadingCard('Loading...'),
-                  error: (e, _) => _buildErrorCard('Error: \$e'),
-                ),
-                _buildStatCard(
-                  context,
-                  l10n.estimatedRecords,
-                  '\${usageLogsAsync.value?.where((l) => l.estimated).length ?? 0}',
-                  Icons.calculate,
-                  Colors.red,
-                ),
-                _buildStatCard(
-                  context,
-                  l10n.totalTokens,
-                  _formatTokens(usageLogsAsync.value),
-                  Icons.data_usage,
-                  Colors.teal,
+                  ).push(MaterialPageRoute(builder: (_) => const HelpPage())),
+                  icon: const Icon(Icons.help_outline_rounded),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Text(
-              l10n.recentActivity,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            usageLogsAsync.when(
-              data: (logs) => ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: logs.take(10).length,
-                itemBuilder: (context, index) {
-                  final log = logs[index];
-                  return ListTile(
-                    leading: Icon(
-                      log.estimated ? Icons.calculate : Icons.check_circle,
-                      color: log.estimated ? Colors.orange : Colors.green,
-                    ),
-                    title: Text(log.modelName),
-                    subtitle: Text(
-                      '\${l10n.providerName(log.providerType.name)} \${_formatDateTime(log.requestTime)}',
-                    ),
-                    trailing: Text(
-                      log.cost != null ? '\$\${log.cost!.toStringAsFixed(4)}' : '-',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  );
-                },
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: \$e')),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
+  Widget _buildGradientStatCard(_StatItem item) {
+    final gradient =
+        AppTheme.statGradients[item.colorIndex % AppTheme.statGradients.length];
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spaceL),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(AppTheme.radiusM),
+        boxShadow: AppTheme.shadowS(),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(
+                item.icon,
+                color: Colors.white.withValues(alpha: 0.9),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            item.value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 最近活动列表 ────────────────────────────────────────
+  Widget _buildRecentList(List<UsageLog> logs, L10nLocalizations l10n) {
+    if (logs.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.inbox_rounded, size: 48, color: Colors.grey[400]),
+              const SizedBox(height: 12),
+              Text(l10n.noLogs, style: TextStyle(color: Colors.grey[500])),
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(
+      children: logs
+          .take(10)
+          .map((log) => _buildRecentItem(log, l10n))
+          .toList(),
+    );
+  }
+
+  Widget _buildRecentItem(UsageLog log, L10nLocalizations l10n) {
+    final isEstimated = log.estimated;
+    final statusColor = isEstimated ? AppTheme.warning : AppTheme.success;
+    final statusIcon = isEstimated
+        ? Icons.calculate_rounded
+        : Icons.check_circle_rounded;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppTheme.spaceS),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.spaceL,
+        vertical: AppTheme.spaceM,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusM),
+        border: Border.all(
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusS),
+            ),
+            child: Icon(statusIcon, color: statusColor, size: 20),
+          ),
+          const SizedBox(width: AppTheme.spaceM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  log.modelName,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  '${l10n.providerName(log.providerType)}  ${_formatDateTime(log.requestTime)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            log.cost != null ? '\$${log.cost!.toStringAsFixed(4)}' : '-',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingCard(String text) {
-    return Card(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-            const SizedBox(height: 8),
-            Text(text, style: const TextStyle(fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorCard(String text) {
-    return Card(
-      child: Center(
-        child: Text(
-          text,
-          style: const TextStyle(color: Colors.red, fontSize: 12),
-          textAlign: TextAlign.center,
-        ),
+          ),
+        ],
       ),
     );
   }
 
   String _formatTokens(List<UsageLog>? logs) {
     if (logs == null) return '0';
-    final total = logs.fold(0, (sum, log) {
-      return sum + (log.totalTokens ?? 0);
-    });
+    final total = logs.fold(0, (sum, log) => sum + (log.totalTokens ?? 0));
     if (total > 1000000) {
-      return '\${(total / 1000000).toStringAsFixed(2)}M';
+      return '${(total / 1000000).toStringAsFixed(2)}M';
     } else if (total > 1000) {
-      return '\${(total / 1000).toStringAsFixed(2)}K';
+      return '${(total / 1000).toStringAsFixed(2)}K';
     }
-    return '\$total';
+    return '$total';
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return '\${dateTime.year}-\${dateTime.month.toString().padLeft(2, '0')}-\${dateTime.day.toString().padLeft(2, '0')} '
-        '\${dateTime.hour.toString().padLeft(2, '0')}:\${dateTime.minute.toString().padLeft(2, '0')}';
+    return '${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
+}
+
+class _StatItem {
+  final String label;
+  final String value;
+  final IconData icon;
+  final int colorIndex;
+  const _StatItem(this.label, this.value, this.icon, this.colorIndex);
 }
