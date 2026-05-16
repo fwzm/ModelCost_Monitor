@@ -112,14 +112,16 @@ class SseFrameAssembler {
 
   void _emitEvent() {
     final data = _currentDataBuffer.toString();
-    _events.add(SseEvent(
-      event: _currentEventField,
-      id: _currentIdField,
-      retry: _currentRetryField,
-      data: data,
-      rawLines: List.from(_currentEventLines),
-      receivedAt: DateTime.now(),
-    ));
+    _events.add(
+      SseEvent(
+        event: _currentEventField,
+        id: _currentIdField,
+        retry: _currentRetryField,
+        data: data,
+        rawLines: List.from(_currentEventLines),
+        receivedAt: DateTime.now(),
+      ),
+    );
 
     _currentEventField = null;
     _currentIdField = null;

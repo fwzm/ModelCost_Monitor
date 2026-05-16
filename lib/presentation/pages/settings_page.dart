@@ -87,9 +87,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     await service.setSetting('enable_https', _httpsEnabled.toString());
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('balance_threshold', double.tryParse(_balanceThresholdController.text) ?? 0.0);
-    await prefs.setDouble('monthly_budget', double.tryParse(_monthlyBudgetController.text) ?? 0.0);
-    await prefs.setInt('log_retention_days', int.tryParse(_logRetentionController.text) ?? 30);
+    await prefs.setDouble(
+      'balance_threshold',
+      double.tryParse(_balanceThresholdController.text) ?? 0.0,
+    );
+    await prefs.setDouble(
+      'monthly_budget',
+      double.tryParse(_monthlyBudgetController.text) ?? 0.0,
+    );
+    await prefs.setInt(
+      'log_retention_days',
+      int.tryParse(_logRetentionController.text) ?? 30,
+    );
     await prefs.setBool('enable_tray', _enableTray);
     await prefs.setBool('enable_startup', _enableStartup);
     await prefs.setBool('enable_widget', _enableWidget);
@@ -167,13 +176,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.language, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    l10n.language,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 16),
                   SegmentedButton<AppLocale>(
                     segments: [
-                      ButtonSegment(value: AppLocale.zhCN, label: Text(l10n.languageZhCN)),
-                      ButtonSegment(value: AppLocale.zhTW, label: Text(l10n.languageZhTW)),
-                      ButtonSegment(value: AppLocale.en, label: Text(l10n.languageEn)),
+                      ButtonSegment(
+                        value: AppLocale.zhCN,
+                        label: Text(l10n.languageZhCN),
+                      ),
+                      ButtonSegment(
+                        value: AppLocale.zhTW,
+                        label: Text(l10n.languageZhTW),
+                      ),
+                      ButtonSegment(
+                        value: AppLocale.en,
+                        label: Text(l10n.languageEn),
+                      ),
                     ],
                     selected: {_selectedLocale},
                     onSelectionChanged: (set) => _changeLocale(set.first),
@@ -189,7 +210,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.proxySettings, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    l10n.proxySettings,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _hostController,
@@ -252,22 +276,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.alertMonthlyBudget, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    l10n.alertMonthlyBudget,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _balanceThresholdController,
                     decoration: InputDecoration(
                       labelText: l10n.balanceThreshold,
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _monthlyBudgetController,
-                    decoration: InputDecoration(
-                      labelText: l10n.monthlyBudget,
+                    decoration: InputDecoration(labelText: l10n.monthlyBudget),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   ),
                   const SizedBox(height: 8),
                   TextField(
@@ -288,7 +317,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.about, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    l10n.about,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 16),
                   if (Platform.isWindows)
                     SwitchListTile(
@@ -331,7 +363,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.security, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    l10n.security,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 16),
                   ListTile(
                     leading: const Icon(Icons.security),
@@ -359,12 +394,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.about, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    l10n.about,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 16),
                   ListTile(
                     leading: const Icon(Icons.info),
                     title: Text(L10n.of('app_title')),
-                    subtitle: Text('\${L10n.of('version')} 1.0.0'),
+                    subtitle: Text('${L10n.of('version')} 1.0.0'),
                   ),
                   ListTile(
                     leading: const Icon(Icons.description),

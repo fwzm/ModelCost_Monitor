@@ -5,14 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:home_widget/home_widget.dart';
 
-import '../../l10n/l10n.dart';
-
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
   static const String _channelProxy = 'proxy_channel';
@@ -21,7 +20,9 @@ class NotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -61,15 +62,17 @@ class NotificationService {
       importance: Importance.high,
     );
 
-    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = _notifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
 
     await androidPlugin?.createNotificationChannel(proxyChannel);
     await androidPlugin?.createNotificationChannel(alertChannel);
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    debugPrint('Notification tapped: \${response.payload}');
+    debugPrint('Notification tapped: ${response.payload}');
   }
 
   Future<void> showProxyRunningNotification({
@@ -88,18 +91,14 @@ class NotificationService {
       autoCancel: false,
       showWhen: false,
       actions: [
-        AndroidNotificationAction(
-          'stop',
-          'Stop',
-          showsUserInterface: true,
-        ),
+        AndroidNotificationAction('stop', 'Stop', showsUserInterface: true),
       ],
     );
 
     await _notifications.show(
       1,
       'ModelCost Monitor Proxy',
-      'Running at \$proxyUrl',
+      'Running at $proxyUrl',
       const NotificationDetails(android: notification),
       payload: 'proxy_running',
     );
@@ -125,7 +124,7 @@ class NotificationService {
     await _notifications.show(
       2,
       'Low Balance Alert',
-      '\$providerName balance is \${balance.toStringAsFixed(2)} \$currency',
+      '$providerName balance is ${balance.toStringAsFixed(2)} $currency',
       const NotificationDetails(android: notification),
       payload: 'low_balance',
     );
@@ -147,7 +146,7 @@ class NotificationService {
     await _notifications.show(
       3,
       'Budget Exceeded',
-      'Monthly cost \${currentCost.toStringAsFixed(2)} \$currency exceeds budget \${budget.toStringAsFixed(2)} \$currency',
+      'Monthly cost ${currentCost.toStringAsFixed(2)} $currency exceeds budget ${budget.toStringAsFixed(2)} $currency',
       const NotificationDetails(android: notification),
       payload: 'budget_exceeded',
     );
@@ -177,7 +176,8 @@ class NotificationService {
 }
 
 class AndroidWidgetService {
-  static final AndroidWidgetService _instance = AndroidWidgetService._internal();
+  static final AndroidWidgetService _instance =
+      AndroidWidgetService._internal();
   factory AndroidWidgetService() => _instance;
   AndroidWidgetService._internal();
 
@@ -190,7 +190,7 @@ class AndroidWidgetService {
     try {
       await HomeWidget.setAppGroupId(_appGroupId);
     } catch (e) {
-      debugPrint('Failed to initialize widget: \$e');
+      debugPrint('Failed to initialize widget: $e');
     }
   }
 
@@ -205,14 +205,20 @@ class AndroidWidgetService {
     try {
       await HomeWidget.saveWidgetData<String>('proxy_state', proxyState);
       await HomeWidget.saveWidgetData<String>('proxy_url', proxyUrl);
-      await HomeWidget.saveWidgetData<String>('today_cost', todayCost.toStringAsFixed(4));
-      await HomeWidget.saveWidgetData<String>('month_cost', monthCost.toStringAsFixed(4));
+      await HomeWidget.saveWidgetData<String>(
+        'today_cost',
+        todayCost.toStringAsFixed(4),
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'month_cost',
+        monthCost.toStringAsFixed(4),
+      );
       await HomeWidget.updateWidget(
         androidName: _androidWidgetName,
         iOSName: 'ModelCostWidget',
       );
     } catch (e) {
-      debugPrint('Failed to update widget: \$e');
+      debugPrint('Failed to update widget: $e');
     }
   }
 }

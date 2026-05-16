@@ -18,9 +18,11 @@ class OpenAITokenEstimator implements TokenEstimator {
   final String _encoding;
   final String _version;
 
-  OpenAITokenEstimator({String encoding = 'cl100k_base', String version = '1.0.0'})
-      : _encoding = encoding,
-        _version = version;
+  OpenAITokenEstimator({
+    String encoding = 'cl100k_base',
+    String version = '1.0.0',
+  }) : _encoding = encoding,
+       _version = version;
 
   @override
   TokenEstimateResult estimate({
@@ -31,7 +33,9 @@ class OpenAITokenEstimator implements TokenEstimator {
     Map<String, dynamic>? rawResponse,
   }) {
     String encoding = _encoding;
-    if (model.contains('o1') || model.contains('o2') || model.contains('gpt-4o')) {
+    if (model.contains('o1') ||
+        model.contains('o2') ||
+        model.contains('gpt-4o')) {
       encoding = 'o200k_base';
     }
 

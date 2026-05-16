@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:json_path/json_path.dart';
 
 import '../models/models.dart';
@@ -11,7 +12,7 @@ class CustomOpenAIAdapter implements ProviderAdapter {
   final Map<String, String>? _jsonPathMappings;
 
   CustomOpenAIAdapter({Map<String, String>? jsonPathMappings})
-      : _jsonPathMappings = jsonPathMappings;
+    : _jsonPathMappings = jsonPathMappings;
 
   @override
   Future<BalanceResult?> fetchBalance({
@@ -27,11 +28,13 @@ class CustomOpenAIAdapter implements ProviderAdapter {
     required String apiKey,
   }) async {
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 20),
-      ));
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 20),
+        ),
+      );
 
       final response = await dio.get(
         '/models',
@@ -48,16 +51,18 @@ class CustomOpenAIAdapter implements ProviderAdapter {
         final models = data['data'] as List<dynamic>?;
         if (models != null) {
           return models
-              .map((m) => ModelInfo(
-                    modelId: m['id'] as String,
-                    displayName: m['name'] as String? ?? m['id'] as String,
-                    providerType: 'customOpenAI',
-                  ))
+              .map(
+                (m) => ModelInfo(
+                  modelId: m['id'] as String,
+                  displayName: m['name'] as String? ?? m['id'] as String,
+                  providerType: 'customOpenAI',
+                ),
+              )
               .toList();
         }
       }
     } catch (e) {
-      print('Custom OpenAI models fetch error: $e');
+      debugPrint('Custom OpenAI models fetch error: $e');
     }
     return [];
   }
@@ -76,16 +81,17 @@ class CustomOpenAIAdapter implements ProviderAdapter {
       int? cachedTokens;
       int? reasoningTokens;
 
-      if (_jsonPathMappings != null && _jsonPathMappings!.isNotEmpty) {
-        final promptPath = _jsonPathMappings!['prompt_tokens'];
+      final mappings = _jsonPathMappings;
+      if (mappings != null && mappings.isNotEmpty) {
+        final promptPath = mappings['prompt_tokens'];
         if (promptPath != null) {
           promptTokens = _extractIntByPath(responseJson, promptPath);
         }
-        final completionPath = _jsonPathMappings!['completion_tokens'];
+        final completionPath = mappings['completion_tokens'];
         if (completionPath != null) {
           completionTokens = _extractIntByPath(responseJson, completionPath);
         }
-        final totalPath = _jsonPathMappings!['total_tokens'];
+        final totalPath = mappings['total_tokens'];
         if (totalPath != null) {
           totalTokens = _extractIntByPath(responseJson, totalPath);
         }
@@ -108,7 +114,9 @@ class CustomOpenAIAdapter implements ProviderAdapter {
         totalTokens: totalTokens,
         estimated: !hasUsage,
         estimatorName: hasUsage ? null : 'custom_openai_fallback',
-        requestStatus: hasUsage ? RequestStatus.completed : RequestStatus.estimatedOnly,
+        requestStatus: hasUsage
+            ? RequestStatus.completed
+            : RequestStatus.estimatedOnly,
       );
     } catch (e) {
       return UsageParseResult(
@@ -134,7 +142,7 @@ class CustomOpenAIAdapter implements ProviderAdapter {
         if (value is String) return int.tryParse(value);
       }
     } catch (e) {
-      print('JSONPath extract error for $path: $e');
+      debugPrint('JSONPath extract error for $path: $e');
     }
     return null;
   }

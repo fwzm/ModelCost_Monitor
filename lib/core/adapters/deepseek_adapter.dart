@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import 'provider_adapter.dart';
@@ -13,11 +14,13 @@ class DeepSeekAdapter implements ProviderAdapter {
     required String apiKey,
   }) async {
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 20),
-      ));
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 20),
+        ),
+      );
 
       final response = await dio.get(
         '/user/balance',
@@ -43,10 +46,12 @@ class DeepSeekAdapter implements ProviderAdapter {
           totalBalance: totalBalance,
           usedBalance: null,
           remainingBalance: totalBalance,
-          grantedBalance: data['granted_balance'] != null 
-              ? double.tryParse(data['granted_balance'].toString()) : null,
-          toppedUpBalance: data['topped_up_balance'] != null 
-              ? double.tryParse(data['topped_up_balance'].toString()) : null,
+          grantedBalance: data['granted_balance'] != null
+              ? double.tryParse(data['granted_balance'].toString())
+              : null,
+          toppedUpBalance: data['topped_up_balance'] != null
+              ? double.tryParse(data['topped_up_balance'].toString())
+              : null,
           currency: currency,
           isAvailable: isAvailable,
           fetchedAt: DateTime.now(),
@@ -54,9 +59,9 @@ class DeepSeekAdapter implements ProviderAdapter {
         );
       }
     } on DioException catch (e) {
-      print('DeepSeek balance fetch error: ${e.message}');
+      debugPrint('DeepSeek balance fetch error: ${e.message}');
     } catch (e) {
-      print('DeepSeek balance fetch error: $e');
+      debugPrint('DeepSeek balance fetch error: $e');
     }
     return null;
   }
@@ -105,8 +110,14 @@ class DeepSeekAdapter implements ProviderAdapter {
       return UsageParseResult(
         promptTokens: usage['prompt_tokens'] as int?,
         completionTokens: usage['completion_tokens'] as int?,
-        cachedTokens: (usage['prompt_tokens_details'] as Map<String, dynamic>?)?['cached_tokens'] as int?,
-        reasoningTokens: (usage['completion_tokens_details'] as Map<String, dynamic>?)?['reasoning_tokens'] as int?,
+        cachedTokens:
+            (usage['prompt_tokens_details']
+                    as Map<String, dynamic>?)?['cached_tokens']
+                as int?,
+        reasoningTokens:
+            (usage['completion_tokens_details']
+                    as Map<String, dynamic>?)?['reasoning_tokens']
+                as int?,
         totalTokens: usage['total_tokens'] as int?,
         estimated: false,
         estimatorName: null,
@@ -149,7 +160,9 @@ class DeepSeekAdapter implements ProviderAdapter {
       final englishPattern = RegExp(r'[a-zA-Z]+');
       englishWords = englishPattern.allMatches(text).length;
 
-      return (chineseChars * chineseCharWeight + englishWords * englishWordWeight).round();
+      return (chineseChars * chineseCharWeight +
+              englishWords * englishWordWeight)
+          .round();
     }
 
     final promptTokens = estimateTokens(promptText);

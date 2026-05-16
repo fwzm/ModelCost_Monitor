@@ -9,9 +9,7 @@ class HelpPage extends StatelessWidget {
     final l10n = L10nLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.navHelp),
-      ),
+      appBar: AppBar(title: Text(l10n.navHelp)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -58,11 +56,7 @@ class HelpPage extends StatelessWidget {
             title: l10n.helpPricingTitle,
             icon: Icons.price_change,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpPricingDesc,
-                Icons.info_outline,
-              ),
+              _buildInfoCard(context, l10n.helpPricingDesc, Icons.info_outline),
             ],
           ),
           const SizedBox(height: 16),
@@ -71,11 +65,7 @@ class HelpPage extends StatelessWidget {
             title: l10n.helpLogsTitle,
             icon: Icons.receipt_long,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpLogsDesc,
-                Icons.info_outline,
-              ),
+              _buildInfoCard(context, l10n.helpLogsDesc, Icons.info_outline),
             ],
           ),
           const SizedBox(height: 16),
@@ -84,11 +74,7 @@ class HelpPage extends StatelessWidget {
             title: l10n.helpChartsTitle,
             icon: Icons.bar_chart,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpChartsDesc,
-                Icons.info_outline,
-              ),
+              _buildInfoCard(context, l10n.helpChartsDesc, Icons.info_outline),
             ],
           ),
           const SizedBox(height: 16),
@@ -97,11 +83,7 @@ class HelpPage extends StatelessWidget {
             title: l10n.helpProxyTitle,
             icon: Icons.router,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpProxyDesc,
-                Icons.info_outline,
-              ),
+              _buildInfoCard(context, l10n.helpProxyDesc, Icons.info_outline),
             ],
           ),
           const SizedBox(height: 16),
@@ -189,8 +171,8 @@ class HelpPage extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -227,9 +209,7 @@ class HelpPage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(text),
-          ),
+          Expanded(child: Text(text)),
         ],
       ),
     );

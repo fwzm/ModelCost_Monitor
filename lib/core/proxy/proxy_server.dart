@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import '../models/models.dart';
@@ -8,7 +9,6 @@ import '../adapters/gemini_adapter.dart';
 import '../adapters/openrouter_adapter.dart';
 import '../adapters/custom_openai_adapter.dart';
 import '../sse/sse_parser.dart';
-import '../pricing/pricing_engine.dart';
 
 class RequestTimeoutPolicy {
   final Duration connectTimeout;
@@ -61,21 +61,21 @@ class ProxyServer {
   List<ModelPriceConfig> _prices;
   final Map<int, dynamic> _adapters = {};
   HttpServer? _server;
-  final PricingEngine _pricingEngine = PricingEngine();
   final Function(Map<String, dynamic>)? onUsageLog;
   final Function(Map<String, dynamic>)? onStateChange;
-  Map<String, ProxyRouteConfigInternal> _routes = {};
+  final Map<String, ProxyRouteConfigInternal> _routes = {};
   ProxyState _state = ProxyState.stopped;
   DateTime? _startTime;
-  bool _enableCors;
-  bool _enableHttps;
+  final bool _enableCors;
+  final bool _enableHttps;
 
   ProxyState get state => _state;
   DateTime? get startTime => _startTime;
   int get actualPort => _server?.port ?? port;
-  Duration get uptime => _startTime != null ? DateTime.now().difference(_startTime!) : Duration.zero;
+  Duration get uptime => _startTime != null
+      ? DateTime.now().difference(_startTime!)
+      : Duration.zero;
   String get scheme => _enableHttps ? 'https' : 'http';
-
 
   ProxyServer({
     required this.host,
@@ -87,15 +87,16 @@ class ProxyServer {
     bool enableCors = true,
     bool enableHttps = false,
     List<ProxyRouteConfig> routes = const [],
-  })  : _accounts = accounts,
-        _prices = prices,
-        _enableCors = enableCors,
-        _enableHttps = enableHttps {
+  }) : _accounts = accounts,
+       _prices = prices,
+       _enableCors = enableCors,
+       _enableHttps = enableHttps {
     _initAdapters();
     _initRoutes(routes);
   }
 
   void _initRoutes(List<ProxyRouteConfig> routes) {
+    _routes.clear();
     for (final route in routes) {
       _routes[route.pathPrefix] = ProxyRouteConfigInternal(
         pathPrefix: route.pathPrefix,
@@ -107,7 +108,9 @@ class ProxyServer {
   }
 
   ProviderType _getProviderTypeForAccount(int accountId) {
-    final account = _accounts.where((a) => a.accountId == accountId).firstOrNull;
+    final account = _accounts
+        .where((a) => a.accountId == accountId)
+        .firstOrNull;
     return account?.providerType ?? ProviderType.customOpenAI;
   }
 
@@ -135,11 +138,30 @@ class ProxyServer {
       _state = ProxyState.starting;
       _startTime = DateTime.now();
 
-      HttpServer server;
-      if (_enableHttps) {
-        server = await HttpServer.bindSecure(host, port);
-      } else {
-        server = await HttpServer.bind(host, port);
+      final portsToTry = _candidatePorts(port);
+      HttpServer? server;
+      Object? lastError;
+      for (final candidatePort in portsToTry) {
+        try {
+          if (_enableHttps) {
+            // TODO: Load a user-provided local certificate before enabling HTTPS
+            // in production. HTTP loopback remains the safe default.
+            server = await HttpServer.bindSecure(
+              host,
+              candidatePort,
+              SecurityContext(),
+            );
+          } else {
+            server = await HttpServer.bind(host, candidatePort);
+          }
+          break;
+        } catch (e) {
+          lastError = e;
+        }
+      }
+
+      if (server == null) {
+        throw lastError ?? const SocketException('Unable to bind proxy port');
       }
 
       _server = server;
@@ -151,6 +173,23 @@ class ProxyServer {
       _state = ProxyState.stopped;
       rethrow;
     }
+  }
+
+  List<int> _candidatePorts(int preferredPort) {
+    final seen = <int>{};
+    final candidates = <int>[];
+
+    void add(int value) {
+      if (seen.add(value)) candidates.add(value);
+    }
+
+    if (preferredPort > 0) add(preferredPort);
+    add(8787);
+    for (var value = 8788; value <= 8899; value++) {
+      add(value);
+    }
+    add(0);
+    return candidates;
   }
 
   Future<void> stop() async {
@@ -189,7 +228,9 @@ class ProxyServer {
       return;
     }
 
-    final account = _accounts.where((a) => a.accountId == route.accountId).firstOrNull;
+    final account = _accounts
+        .where((a) => a.accountId == route.accountId)
+        .firstOrNull;
     if (account == null || !account.enabled || account.apiKey.isEmpty) {
       request.response.statusCode = HttpStatus.unauthorized;
       request.response.write('{"error": "Account not found or disabled"}');
@@ -198,7 +239,8 @@ class ProxyServer {
     }
 
     final targetPath = path.substring(route.pathPrefix.length);
-    final targetUrl = '${route.targetBaseUrl}$targetPath${request.uri.query.isNotEmpty ? "?${request.uri.query}" : ""}';
+    final targetUrl =
+        '${route.targetBaseUrl}$targetPath${request.uri.query.isNotEmpty ? "?${request.uri.query}" : ""}';
 
     try {
       final uri = Uri.parse(targetUrl);
@@ -212,9 +254,18 @@ class ProxyServer {
         proxyRequest = await client.postUrl(uri);
       }
 
-      proxyRequest.headers.set(HttpHeaders.authorizationHeader, 'Bearer ${account.apiKey}');
-      proxyRequest.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-      proxyRequest.headers.set(HttpHeaders.acceptHeader, 'text/event-stream, application/json');
+      proxyRequest.headers.set(
+        HttpHeaders.authorizationHeader,
+        'Bearer ${account.apiKey}',
+      );
+      proxyRequest.headers.set(
+        HttpHeaders.contentTypeHeader,
+        'application/json',
+      );
+      proxyRequest.headers.set(
+        HttpHeaders.acceptHeader,
+        'text/event-stream, application/json',
+      );
 
       if (method != 'GET') {
         final bodyBytes = await request.fold<List<int>>(
@@ -227,12 +278,25 @@ class ProxyServer {
       final proxyResponse = await proxyRequest.close();
       request.response.statusCode = proxyResponse.statusCode;
 
-      final isStreaming = proxyResponse.headers.value(HttpHeaders.contentTypeHeader)?.contains('text/event-stream') == true;
+      final isStreaming =
+          proxyResponse.headers
+              .value(HttpHeaders.contentTypeHeader)
+              ?.contains('text/event-stream') ==
+          true;
 
       if (isStreaming) {
-        request.response.headers.set(HttpHeaders.contentTypeHeader, 'text/event-stream');
-        request.response.headers.set(HttpHeaders.cacheControlHeader, 'no-cache');
-        request.response.headers.set(HttpHeaders.connectionHeader, 'keep-alive');
+        request.response.headers.set(
+          HttpHeaders.contentTypeHeader,
+          'text/event-stream',
+        );
+        request.response.headers.set(
+          HttpHeaders.cacheControlHeader,
+          'no-cache',
+        );
+        request.response.headers.set(
+          HttpHeaders.connectionHeader,
+          'keep-alive',
+        );
         request.response.headers.set('Access-Control-Allow-Origin', '*');
 
         final assembler = SseFrameAssembler();
@@ -269,7 +333,14 @@ class ProxyServer {
           completionTokens = (completionBuffer.toString().length * 0.5).ceil();
         }
 
-        final cost = _calculateCost(account.providerType, _extractModelFromPath(targetPath), promptTokens, completionTokens, 0, 0);
+        final cost = _calculateCost(
+          account.providerType,
+          _extractModelFromPath(targetPath),
+          promptTokens,
+          completionTokens,
+          0,
+          0,
+        );
 
         onUsageLog?.call({
           'accountId': account.accountId,
@@ -296,12 +367,20 @@ class ProxyServer {
         await request.response.close();
 
         try {
-          final json = jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
+          final json =
+              jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
           final usage = json['usage'];
           if (usage != null) {
             final promptTokens = usage['prompt_tokens'] as int? ?? 0;
             final completionTokens = usage['completion_tokens'] as int? ?? 0;
-            final cost = _calculateCost(account.providerType, _extractModelFromPath(targetPath), promptTokens, completionTokens, 0, 0);
+            final cost = _calculateCost(
+              account.providerType,
+              _extractModelFromPath(targetPath),
+              promptTokens,
+              completionTokens,
+              0,
+              0,
+            );
 
             onUsageLog?.call({
               'accountId': account.accountId,
@@ -359,7 +438,9 @@ class ProxyServer {
     int reasoningTokens,
   ) {
     final price = _prices
-        .where((p) => p.providerType == providerType && p.modelName == modelName)
+        .where(
+          (p) => p.providerType == providerType && p.modelName == modelName,
+        )
         .firstOrNull;
 
     if (price == null) return null;
@@ -380,8 +461,14 @@ class ProxyServer {
   void _addCorsHeaders(HttpRequest request) {
     final response = request.response;
     response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept, Origin, User-Agent');
+    response.headers.set(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    );
+    response.headers.set(
+      'Access-Control-Allow-Headers',
+      'Authorization, Content-Type, Accept, Origin, User-Agent',
+    );
     response.headers.set('Access-Control-Max-Age', '86400');
   }
 
@@ -397,7 +484,10 @@ class ProxyServer {
       'version': '1.0.0',
     };
 
-    request.response.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+    request.response.headers.set(
+      HttpHeaders.contentTypeHeader,
+      'application/json',
+    );
     request.response.write(jsonEncode(healthResponse));
     await request.response.close();
   }

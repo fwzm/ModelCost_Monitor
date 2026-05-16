@@ -11,7 +11,8 @@ import '../proxy/proxy_isolate.dart';
 typedef ProxyLifecycleCallback = void Function(ProxyState state, String url);
 
 class ProxyLifecycleService {
-  static final ProxyLifecycleService _instance = ProxyLifecycleService._internal();
+  static final ProxyLifecycleService _instance =
+      ProxyLifecycleService._internal();
   factory ProxyLifecycleService() => _instance;
   ProxyLifecycleService._internal();
 
@@ -20,7 +21,6 @@ class ProxyLifecycleService {
   Timer? _healthCheckTimer;
   Timer? _balanceCheckTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
-  bool _isResumed = false;
   int _restartAttempts = 0;
   static const int _maxRestartAttempts = 3;
 
@@ -44,16 +44,16 @@ class ProxyLifecycleService {
   }
 
   Future<void> _setupConnectivityListener() async {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
-      (List<ConnectivityResult> results) {
-        if (results.contains(ConnectivityResult.none)) {
-          debugPrint('Network disconnected');
-        } else {
-          debugPrint('Network connected: \$results');
-          _onNetworkChanged();
-        }
-      },
-    );
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      List<ConnectivityResult> results,
+    ) {
+      if (results.contains(ConnectivityResult.none)) {
+        debugPrint('Network disconnected');
+      } else {
+        debugPrint('Network connected: $results');
+        _onNetworkChanged();
+      }
+    });
   }
 
   Future<void> _setupDisplayMode() async {
@@ -65,7 +65,7 @@ class ProxyLifecycleService {
         await FlutterDisplayMode.setPreferredMode(modes.first);
       }
     } catch (e) {
-      debugPrint('Failed to set display mode: \$e');
+      debugPrint('Failed to set display mode: $e');
     }
   }
 
@@ -91,7 +91,7 @@ class ProxyLifecycleService {
     try {
       await _proxyManager.sendHealthCheck();
     } catch (e) {
-      debugPrint('Health check failed: \$e');
+      debugPrint('Health check failed: $e');
     }
   }
 
@@ -102,7 +102,6 @@ class ProxyLifecycleService {
   void _handleProxyEvent(ProxyStatusEvent event) {
     if (event is ProxyStarted) {
       _restartAttempts = 0;
-      _isResumed = true;
       onStateChanged?.call(ProxyState.running, _proxyManager.actualUrl);
     } else if (event is ProxyStopped) {
       onStateChanged?.call(ProxyState.stopped, _proxyManager.actualUrl);
@@ -114,7 +113,7 @@ class ProxyLifecycleService {
   }
 
   void _handleProxyError(Object error) {
-    debugPrint('Proxy error: \$error');
+    debugPrint('Proxy error: $error');
     onStateChanged?.call(ProxyState.crashed, _proxyManager.actualUrl);
   }
 
@@ -141,15 +140,12 @@ class ProxyLifecycleService {
   }
 
   void _onAppResumed() {
-    _isResumed = true;
     if (_proxyManager.state == ProxyState.running) {
       _performHealthCheck();
     }
   }
 
-  void _onAppPaused() {
-    _isResumed = false;
-  }
+  void _onAppPaused() {}
 
   void _onAppDetached() {
     // App is being terminated
@@ -174,7 +170,7 @@ class ProxyLifecycleService {
       _restartAttempts++;
       await _performHealthCheck();
     } catch (e) {
-      debugPrint('Recovery attempt \$_restartAttempts failed: \$e');
+      debugPrint('Recovery attempt $_restartAttempts failed: $e');
       await Future.delayed(Duration(seconds: _restartAttempts * 2));
       await _recoverProxy();
     }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:isolate';
 
 import '../models/models.dart';
@@ -21,7 +20,9 @@ class ProxyIsolateManager {
   ProxyState get state => _state;
   DateTime? get startTime => _startTime;
   String get actualUrl => _actualUrl;
-  int get uptime => _startTime != null ? DateTime.now().difference(_startTime!).inMilliseconds : 0;
+  int get uptime => _startTime != null
+      ? DateTime.now().difference(_startTime!).inMilliseconds
+      : 0;
 
   Future<bool> start({
     required String host,
@@ -36,37 +37,43 @@ class ProxyIsolateManager {
 
     try {
       final accountsList = accounts
-          .map((a) => {
-                'accountId': a.accountId,
-                'providerType': a.providerType.name,
-                'displayName': a.displayName,
-                'baseUrl': a.baseUrl,
-                'apiKeyAlias': a.apiKeyAlias,
-                'apiKey': a.apiKey,
-                'currency': a.currency,
-                'enabled': a.enabled,
-                'proxyEnabled': a.proxyEnabled,
-              })
+          .map(
+            (a) => {
+              'accountId': a.accountId,
+              'providerType': a.providerType.name,
+              'displayName': a.displayName,
+              'baseUrl': a.baseUrl,
+              'apiKeyAlias': a.apiKeyAlias,
+              'apiKey': a.apiKey,
+              'currency': a.currency,
+              'enabled': a.enabled,
+              'proxyEnabled': a.proxyEnabled,
+            },
+          )
           .toList();
 
       final pricesList = prices
-          .map((p) => {
-                'providerType': p.providerType.name,
-                'modelName': p.modelName,
-                'inputPricePer1M': p.inputPricePer1M,
-                'outputPricePer1M': p.outputPricePer1M,
-                'cachedInputPricePer1M': p.cachedInputPricePer1M,
-                'reasoningOutputPricePer1M': p.reasoningOutputPricePer1M,
-                'currency': p.currency,
-              })
+          .map(
+            (p) => {
+              'providerType': p.providerType.name,
+              'modelName': p.modelName,
+              'inputPricePer1M': p.inputPricePer1M,
+              'outputPricePer1M': p.outputPricePer1M,
+              'cachedInputPricePer1M': p.cachedInputPricePer1M,
+              'reasoningOutputPricePer1M': p.reasoningOutputPricePer1M,
+              'currency': p.currency,
+            },
+          )
           .toList();
 
       final routesList = routes
-          .map((r) => {
-                'pathPrefix': r.pathPrefix,
-                'accountId': r.accountId,
-                'targetBaseUrl': r.targetBaseUrl,
-              })
+          .map(
+            (r) => {
+              'pathPrefix': r.pathPrefix,
+              'accountId': r.accountId,
+              'targetBaseUrl': r.targetBaseUrl,
+            },
+          )
           .toList();
 
       _isolate = await Isolate.spawn(
@@ -83,12 +90,15 @@ class ProxyIsolateManager {
         onExit: _receivePort.sendPort,
       );
 
-      _receivePort.listen((message) {
-        _handleIsolateMessage(message);
-      }, onError: (error) {
-        _state = ProxyState.crashed;
-        onError?.call(error);
-      });
+      _receivePort.listen(
+        (message) {
+          _handleIsolateMessage(message);
+        },
+        onError: (error) {
+          _state = ProxyState.crashed;
+          onError?.call(error);
+        },
+      );
 
       return true;
     } catch (e) {
@@ -145,13 +155,17 @@ class ProxyIsolateManager {
 
       case 'proxy_error':
         _state = ProxyState.degraded;
-        onEvent?.call(ProxyError(message: message['error']?.toString() ?? 'Unknown error'));
+        onEvent?.call(
+          ProxyError(message: message['error']?.toString() ?? 'Unknown error'),
+        );
         break;
 
       case 'proxy_port_changed':
         final newPort = message['new_port'] ?? message['port'];
         _actualUrl = 'http://127.0.0.1:$newPort';
-        onEvent?.call(ProxyPortChanged(newPort: newPort, reason: 'Port auto-fallback'));
+        onEvent?.call(
+          ProxyPortChanged(newPort: newPort, reason: 'Port auto-fallback'),
+        );
         break;
     }
   }
@@ -182,7 +196,10 @@ Future<void> _proxyIsolateEntry(Map<String, dynamic> args) async {
       final m = e as Map<String, dynamic>;
       return AccountConfig(
         accountId: m['accountId'] as int,
-        providerType: ProviderType.values.firstWhere((et) => et.name == m['providerType'], orElse: () => ProviderType.customOpenAI),
+        providerType: ProviderType.values.firstWhere(
+          (et) => et.name == m['providerType'],
+          orElse: () => ProviderType.customOpenAI,
+        ),
         displayName: m['displayName'] as String,
         baseUrl: m['baseUrl'] as String,
         apiKeyAlias: m['apiKeyAlias'] as String? ?? '',
@@ -196,12 +213,19 @@ Future<void> _proxyIsolateEntry(Map<String, dynamic> args) async {
     final prices = pricesJson.map((e) {
       final m = e as Map<String, dynamic>;
       return ModelPriceConfig(
-        providerType: ProviderType.values.firstWhere((et) => et.name == m['providerType'], orElse: () => ProviderType.customOpenAI),
+        providerType: ProviderType.values.firstWhere(
+          (et) => et.name == m['providerType'],
+          orElse: () => ProviderType.customOpenAI,
+        ),
         modelName: m['modelName'] as String,
         inputPricePer1M: (m['inputPricePer1M'] as num).toDouble(),
         outputPricePer1M: (m['outputPricePer1M'] as num).toDouble(),
-        cachedInputPricePer1M: m['cachedInputPricePer1M'] != null ? (m['cachedInputPricePer1M'] as num).toDouble() : null,
-        reasoningOutputPricePer1M: m['reasoningOutputPricePer1M'] != null ? (m['reasoningOutputPricePer1M'] as num).toDouble() : null,
+        cachedInputPricePer1M: m['cachedInputPricePer1M'] != null
+            ? (m['cachedInputPricePer1M'] as num).toDouble()
+            : null,
+        reasoningOutputPricePer1M: m['reasoningOutputPricePer1M'] != null
+            ? (m['reasoningOutputPricePer1M'] as num).toDouble()
+            : null,
         currency: m['currency'] as String? ?? 'USD',
       );
     }).toList();
@@ -225,10 +249,20 @@ Future<void> _proxyIsolateEntry(Map<String, dynamic> args) async {
 
     final actualPort = await server.start();
     if (actualPort != port) {
-      mainSendPort.send({'type': 'proxy_port_changed', 'old_port': port, 'new_port': actualPort, 'host': host});
+      mainSendPort.send({
+        'type': 'proxy_port_changed',
+        'old_port': port,
+        'new_port': actualPort,
+        'host': host,
+      });
     }
 
-    mainSendPort.send({'type': 'proxy_started', 'host': host, 'port': actualPort, 'state': 'running'});
+    mainSendPort.send({
+      'type': 'proxy_started',
+      'host': host,
+      'port': actualPort,
+      'state': 'running',
+    });
 
     isolateReceivePort.listen((message) {
       if (message is! Map) return;
@@ -236,7 +270,10 @@ Future<void> _proxyIsolateEntry(Map<String, dynamic> args) async {
       switch (message['type']) {
         case 'stop':
           server?.stop();
-          mainSendPort.send({'type': 'proxy_stopped', 'uptime_ms': DateTime.now().difference(startTime).inMilliseconds});
+          mainSendPort.send({
+            'type': 'proxy_stopped',
+            'uptime_ms': DateTime.now().difference(startTime).inMilliseconds,
+          });
           break;
       }
     });
@@ -244,6 +281,10 @@ Future<void> _proxyIsolateEntry(Map<String, dynamic> args) async {
     await Completer<void>().future;
   } catch (e, stackTrace) {
     server?.stop();
-    mainSendPort.send({'type': 'proxy_crashed', 'error': e.toString(), 'stack_trace': stackTrace.toString()});
+    mainSendPort.send({
+      'type': 'proxy_crashed',
+      'error': e.toString(),
+      'stack_trace': stackTrace.toString(),
+    });
   }
 }

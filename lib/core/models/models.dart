@@ -7,10 +7,16 @@ enum RequestStatus {
   clientCancelled,
   providerError,
   parseError,
-  estimatedOnly
+  estimatedOnly,
 }
 
-enum UsageSource { officialApi, proxy, manualImport, localEstimator, countTokensApi }
+enum UsageSource {
+  officialApi,
+  proxy,
+  manualImport,
+  localEstimator,
+  countTokensApi,
+}
 
 enum ProxyRuntimeEventType {
   proxyStarting,
@@ -28,7 +34,7 @@ enum ProxyRuntimeEventType {
   healthCheckFailed,
   sleepResumeDetected,
   networkChangeDetected,
-  corsPreflightHandled
+  corsPreflightHandled,
 }
 
 enum ProxyState { stopped, starting, running, degraded, stopping, crashed }
@@ -248,20 +254,14 @@ class ProxyError extends ProxyStatusEvent {
   final String message;
   final String? stackTrace;
 
-  const ProxyError({
-    required this.message,
-    this.stackTrace,
-  });
+  const ProxyError({required this.message, this.stackTrace});
 }
 
 class ProxyPortChanged extends ProxyStatusEvent {
   final int newPort;
   final String reason;
 
-  const ProxyPortChanged({
-    required this.newPort,
-    required this.reason,
-  });
+  const ProxyPortChanged({required this.newPort, required this.reason});
 }
 
 class HealthCheckResult {

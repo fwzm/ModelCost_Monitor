@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/services/services.dart';
-import '../core/models/models.dart';
 import '../data/database/database.dart';
 import '../core/proxy/proxy_isolate.dart';
+import '../core/pricing/pricing_preset_service.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
   return AppDatabase.connect();
@@ -32,6 +32,10 @@ final pricingServiceProvider = Provider<PricingService>((ref) {
   return PricingService(database: ref.read(databaseProvider));
 });
 
+final pricingPresetServiceProvider = Provider<PricingPresetService>((ref) {
+  return PricingPresetService();
+});
+
 final settingsServiceProvider = Provider<SettingsService>((ref) {
   return SettingsService(database: ref.read(databaseProvider));
 });
@@ -40,14 +44,18 @@ final accountsProvider = FutureProvider<List<Account>>((ref) async {
   return ref.watch(accountServiceProvider).getAllAccounts();
 });
 
-final balanceSnapshotsProvider = FutureProvider<List<BalanceSnapshot>>((ref) async {
+final balanceSnapshotsProvider = FutureProvider<List<BalanceSnapshot>>((
+  ref,
+) async {
   final accountService = ref.watch(accountServiceProvider);
   final accounts = await accountService.getAllAccounts();
   if (accounts.isEmpty) return [];
 
   final snapshots = <BalanceSnapshot>[];
   for (final account in accounts) {
-    final balance = await ref.watch(balanceServiceProvider).getLatestBalance(account.id);
+    final balance = await ref
+        .watch(balanceServiceProvider)
+        .getLatestBalance(account.id);
     if (balance != null) {
       snapshots.add(balance);
     }
@@ -72,5 +80,7 @@ final monthCostProvider = FutureProvider<double>((ref) async {
 });
 
 final proxyManagerProvider = Provider<ProxyIsolateManager>((ref) {
-  return ProxyIsolateManager();
+  final manager = ProxyIsolateManager();
+  ref.onDispose(manager.dispose);
+  return manager;
 });

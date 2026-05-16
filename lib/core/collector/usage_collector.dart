@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:drift/drift.dart' show Value;
-
 import '../../data/database/database.dart';
 
 class PendingUsageLog {
@@ -10,15 +8,21 @@ class PendingUsageLog {
   int retryCount;
   DateTime nextRetryAt;
   final DateTime createdAt;
+  final int maxRetries;
+  final int retryBaseIntervalMs;
 
-  PendingUsageLog(this.companion)
-      : retryCount = 0,
-        nextRetryAt = DateTime.now(),
-        createdAt = DateTime.now();
+  PendingUsageLog(
+    this.companion, {
+    required this.maxRetries,
+    required this.retryBaseIntervalMs,
+  }) : retryCount = 0,
+       nextRetryAt = DateTime.now(),
+       createdAt = DateTime.now();
 
-  bool get canRetry => retryCount < 5;
+  bool get canRetry => retryCount < maxRetries;
 
-  Duration get retryDelay => Duration(milliseconds: 100 * (1 << retryCount));
+  Duration get retryDelay =>
+      Duration(milliseconds: retryBaseIntervalMs * (1 << retryCount));
 }
 
 class UsageCollector {
@@ -37,10 +41,10 @@ class UsageCollector {
     int flushIntervalMs = 500,
     int maxRetries = 5,
     int retryBaseIntervalMs = 100,
-  })  : _db = db,
-        _flushIntervalMs = flushIntervalMs,
-        _maxRetries = maxRetries,
-        _retryBaseIntervalMs = retryBaseIntervalMs;
+  }) : _db = db,
+       _flushIntervalMs = flushIntervalMs,
+       _maxRetries = maxRetries,
+       _retryBaseIntervalMs = retryBaseIntervalMs;
 
   void start() {
     _flushTimer = Timer.periodic(
@@ -64,15 +68,23 @@ class UsageCollector {
       _totalWrites++;
     } catch (e) {
       if (_isDatabaseLockedError(e)) {
-        final pending = PendingUsageLog(companion);
+        final pending = _createPendingLog(companion);
         pending.retryCount = 0;
         _pendingQueue.add(pending);
       } else {
-        final pending = PendingUsageLog(companion);
+        final pending = _createPendingLog(companion);
         _pendingQueue.add(pending);
         _failedWrites++;
       }
     }
+  }
+
+  PendingUsageLog _createPendingLog(UsageLogsCompanion companion) {
+    return PendingUsageLog(
+      companion,
+      maxRetries: _maxRetries,
+      retryBaseIntervalMs: _retryBaseIntervalMs,
+    );
   }
 
   Future<void> _flushPendingLogs() async {

@@ -32,89 +32,138 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
   void _showAddAccountDialog() {
     final l10n = L10nLocalizations.of(context);
+    _fillDefaultAccountFields();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.addAccount),
-        content: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<ProviderType>(
-                  initialValue: _selectedProvider,
-                  decoration: InputDecoration(labelText: l10n.provider),
-                  items: ProviderType.values.map((type) {
-                    return DropdownMenuItem(
-                      value: type,
-                      child: Text(l10n.providerName(type.name)),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedProvider = value!;
-                    });
-                  },
-                ),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: InputDecoration(labelText: l10n.displayName),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return l10n.required;
-                    }
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: _baseUrlController,
-                  decoration: InputDecoration(labelText: l10n.baseUrl),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return l10n.required;
-                    }
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: _apiKeyController,
-                  decoration: InputDecoration(labelText: l10n.apiKey),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return l10n.required;
-                    }
-                    return null;
-                  },
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: _currency,
-                  decoration: InputDecoration(labelText: l10n.currency),
-                  items: const [
-                    DropdownMenuItem(value: 'USD', child: Text('USD')),
-                    DropdownMenuItem(value: 'CNY', child: Text('CNY')),
-                    DropdownMenuItem(value: 'EUR', child: Text('EUR')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _currency = value!;
-                    });
-                  },
-                ),
-              ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(l10n.addAccount),
+          content: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<ProviderType>(
+                    initialValue: _selectedProvider,
+                    decoration: InputDecoration(labelText: l10n.provider),
+                    items: ProviderType.values.map((type) {
+                      return DropdownMenuItem(
+                        value: type,
+                        child: Text(l10n.providerName(type.name)),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        _selectedProvider = value!;
+                        _fillDefaultAccountFields(force: true);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(labelText: l10n.displayName),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return l10n.required;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _baseUrlController,
+                    decoration: InputDecoration(
+                      labelText: l10n.baseUrl,
+                      suffixIcon: IconButton(
+                        tooltip: L10n.of('default_base_url_filled'),
+                        icon: const Icon(Icons.auto_fix_high),
+                        onPressed: () {
+                          setDialogState(
+                            () => _fillDefaultAccountFields(force: true),
+                          );
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return l10n.required;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _apiKeyController,
+                    decoration: InputDecoration(labelText: l10n.apiKey),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return l10n.required;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _currency,
+                    decoration: InputDecoration(labelText: l10n.currency),
+                    items: const [
+                      DropdownMenuItem(value: 'USD', child: Text('USD')),
+                      DropdownMenuItem(value: 'CNY', child: Text('CNY')),
+                      DropdownMenuItem(value: 'EUR', child: Text('EUR')),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        _currency = value!;
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(onPressed: _addAccount, child: Text(l10n.addAccount)),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(onPressed: _addAccount, child: Text(l10n.addAccount)),
-        ],
       ),
     );
+  }
+
+  void _fillDefaultAccountFields({bool force = false}) {
+    final defaultUrl = _defaultBaseUrl(_selectedProvider);
+    if (force || _baseUrlController.text.trim().isEmpty) {
+      _baseUrlController.text = defaultUrl;
+    }
+    if (force || _nameController.text.trim().isEmpty) {
+      _nameController.text = _defaultDisplayName(_selectedProvider);
+    }
+  }
+
+  String _defaultDisplayName(ProviderType type) {
+    final l10n = L10nLocalizations.of(context);
+    return l10n.providerName(type.name);
+  }
+
+  String _defaultBaseUrl(ProviderType type) {
+    switch (type) {
+      case ProviderType.deepseek:
+        return 'https://api.deepseek.com';
+      case ProviderType.mimo:
+        return 'https://api.xiaomimimo.com/v1';
+      case ProviderType.gemini:
+        return 'https://generativelanguage.googleapis.com';
+      case ProviderType.openrouter:
+        return 'https://openrouter.ai/api';
+      case ProviderType.customOpenAI:
+        return 'http://127.0.0.1:8000';
+    }
   }
 
   Future<void> _addAccount() async {
@@ -147,7 +196,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed to add account: \$e')));
+        ).showSnackBar(SnackBar(content: Text('Failed to add account: $e')));
       }
     }
   }
@@ -187,8 +236,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
   String _maskApiKey(String? alias) {
     if (alias == null) return 'Not set';
-    if (alias.length <= 4) return '****';
-    return '****\${alias.substring(alias.length - 4)}';
+    return alias;
   }
 
   @override
@@ -249,7 +297,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '\${l10n.providerName(account.providerType.name)} \${account.baseUrl}',
+                        '${l10n.providerName(account.providerType.name)} ${account.baseUrl}',
                       ),
                       Text(_maskApiKey(account.apiKeyAlias)),
                     ],
@@ -280,7 +328,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: \$e')),
+        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }

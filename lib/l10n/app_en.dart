@@ -6,6 +6,7 @@ const Map<String, String> en = {
   'nav_logs': 'Logs',
   'nav_settings': 'Settings',
   'nav_charts': 'Charts',
+  'nav_more': 'More',
   'proxy_status_stopped': 'Stopped',
   'proxy_status_starting': 'Starting...',
   'proxy_status_running': 'Running',
@@ -17,6 +18,9 @@ const Map<String, String> en = {
   'proxy_stop': 'Stop',
   'proxy_start': 'Start',
   'proxy_restart': 'Restart',
+  'proxy_no_accounts': 'Add and enable at least one proxy account first',
+  'proxy_url_hint':
+      'Set this as the Base URL in external clients to start recording usage.',
   'current_proxy_url': 'Current Proxy URL',
   'today_cost': 'Today\'s Cost',
   'month_cost': 'Monthly Cost',
@@ -28,7 +32,8 @@ const Map<String, String> en = {
   'add_account': 'Add Account',
   'edit_account': 'Edit Account',
   'delete_account': 'Delete Account',
-  'delete_account_confirm': 'Are you sure you want to delete this account? This action cannot be undone.',
+  'delete_account_confirm':
+      'Are you sure you want to delete this account? This action cannot be undone.',
   'cancel': 'Cancel',
   'delete': 'Delete',
   'display_name': 'Display Name',
@@ -45,6 +50,10 @@ const Map<String, String> en = {
   'output_price_per_1m': 'Output Price per 1M tokens',
   'cached_input_price': 'Cached Input Price (optional)',
   'reasoning_output_price': 'Reasoning Output Price (optional)',
+  'input_short': 'Input',
+  'output_short': 'Output',
+  'cached_short': 'Cached',
+  'reasoning_short': 'Reasoning',
   'price_added': 'Price added successfully',
   'price_deleted': 'Price deleted',
   'proxy_settings': 'Proxy Settings',
@@ -135,12 +144,27 @@ const Map<String, String> en = {
   'source_local_estimator': 'Local Estimator',
   'source_count_tokens_api': 'Count Tokens API',
   'lan_access': 'LAN Access',
-  'lan_access_warning': 'Enabling LAN access will expose the proxy to the local network. Please ensure an access token is set.',
+  'lan_access_warning':
+      'Enabling LAN access will expose the proxy to the local network. Please ensure an access token is set.',
   'lan_access_token': 'Access Token',
   'enable_lan_access': 'Enable LAN Access',
   'proxy_address': 'Proxy Address',
   'copy_address': 'Copy Address',
   'address_copied': 'Address copied',
+  'refresh': 'Refresh',
+  'load_failed': 'Load failed',
+  'records': 'records',
+  'missing_price': 'Missing price',
+  'quick_start_title': 'Quick Start',
+  'quick_step_account': 'Add account',
+  'quick_step_proxy': 'Start proxy',
+  'quick_step_usage': 'Record usage',
+  'apply_builtin_prices': 'Fill common prices',
+  'import_openrouter_prices': 'Import OpenRouter prices online',
+  'prices_imported': 'Imported {count} prices',
+  'price_source_notice':
+      'Built-in prices come from official public pricing pages. Re-import or edit after provider price changes.',
+  'default_base_url_filled': 'Default URL filled',
   'confirm_copy_api_key': 'Are you sure you want to copy the API key?',
   'confirm': 'Confirm',
   'copy': 'Copy',
@@ -175,37 +199,56 @@ const Map<String, String> en = {
   'nav_help': 'Help',
   'help_quick_start': 'Quick Start',
   'help_step1_add_account': 'Add your first API account',
-  'help_step2_config_price': 'Configure model prices (if custom pricing is needed)',
+  'help_step2_config_price':
+      'Configure model prices (if custom pricing is needed)',
   'help_step3_start_proxy': 'Start the local proxy in Settings',
-  'help_step4_use_proxy': 'Configure your app proxy address to http://127.0.0.1:8787',
+  'help_step4_use_proxy':
+      'Configure your app proxy address to http://127.0.0.1:8787',
   'help_dashboard_title': 'Dashboard',
-  'help_dashboard_desc': 'View today\'s and monthly cost overview, including request count, token usage, and proxy status.',
+  'help_dashboard_desc':
+      'View today\'s and monthly cost overview, including request count, token usage, and proxy status.',
   'help_accounts_title': 'Account Management',
-  'help_accounts_desc': 'Add, edit or delete API accounts. Supports DeepSeek, MiMo, Gemini, OpenRouter and custom OpenAI-compatible endpoints.',
+  'help_accounts_desc':
+      'Add, edit or delete API accounts. Supports DeepSeek, MiMo, Gemini, OpenRouter and custom OpenAI-compatible endpoints.',
   'help_pricing_title': 'Pricing Configuration',
-  'help_pricing_desc': 'Configure input/output prices for each model. The system automatically calculates costs based on token count and price.',
+  'help_pricing_desc':
+      'Configure input/output prices for each model. The system automatically calculates costs based on token count and price.',
   'help_logs_title': 'Request Logs',
-  'help_logs_desc': 'View detailed records of all API requests, including timestamp, model, token count and cost. Supports filtering and export.',
+  'help_logs_desc':
+      'View detailed records of all API requests, including timestamp, model, token count and cost. Supports filtering and export.',
   'help_charts_title': 'Charts Analysis',
-  'help_charts_desc': 'Visualize cost trends, model breakdown, token comparison and more to help analyze usage patterns.',
+  'help_charts_desc':
+      'Visualize cost trends, model breakdown, token comparison and more to help analyze usage patterns.',
   'help_proxy_title': 'Local Proxy',
-  'help_proxy_desc': 'The local proxy intercepts API requests and records usage. Supports HTTP/HTTPS, CORS configuration and LAN access.',
+  'help_proxy_desc':
+      'The local proxy intercepts API requests and records usage. Supports HTTP/HTTPS, CORS configuration and LAN access.',
   'help_settings_title': 'Settings Options',
-  'help_settings_desc': 'Configure proxy port, CORS, budget alerts, language and more. Security settings ensure your API keys are safe.',
+  'help_settings_desc':
+      'Configure proxy port, CORS, budget alerts, language and more. Security settings ensure your API keys are safe.',
   'help_faq_title': 'FAQ',
   'help_faq1_q': 'What are estimated records?',
-  'help_faq1_a': 'When the official API cannot return complete usage data, the system estimates costs based on token count. Estimated results may have some variance.',
+  'help_faq1_a':
+      'When the official API cannot return complete usage data, the system estimates costs based on token count. Estimated results may have some variance.',
   'help_faq2_q': 'How to set budget alerts?',
-  'help_faq2_a': 'In Settings, you can set monthly budget and balance alert thresholds. The system will send notifications when spending exceeds the set value.',
+  'help_faq2_a':
+      'In Settings, you can set monthly budget and balance alert thresholds. The system will send notifications when spending exceeds the set value.',
   'help_faq3_q': 'What models are supported?',
-  'help_faq3_a': 'The system supports all OpenAI API-compatible models, including DeepSeek, Gemini, Claude, GPT, etc. Just add the corresponding price configuration.',
+  'help_faq3_a':
+      'The system supports all OpenAI API-compatible models, including DeepSeek, Gemini, Claude, GPT, etc. Just add the corresponding price configuration.',
   'help_faq4_q': 'Is my data secure?',
-  'help_faq4_a': 'Yes. All API keys are encrypted using secure storage, and no request content is uploaded to external servers.',
+  'help_faq4_a':
+      'Yes. All API keys are encrypted using secure storage, and no request content is uploaded to external servers.',
   'help_tips_title': 'Usage Tips',
-  'help_tip1': 'Regularly check the logs page to ensure the estimated record ratio is within reasonable range.',
-  'help_tip2': 'Enable home widget in settings for quick access to current cost status.',
-  'help_tip3': 'Enable LAN access if you need to share across multiple devices.',
+  'help_tip1':
+      'Regularly check the logs page to ensure the estimated record ratio is within reasonable range.',
+  'help_tip2':
+      'Enable home widget in settings for quick access to current cost status.',
+  'help_tip3':
+      'Enable LAN access if you need to share across multiple devices.',
   'help_tip4': 'Set monthly budget alerts to avoid unexpected overspending.',
   'help_contact_title': 'Contact Us',
-  'help_contact_desc': 'For questions or suggestions, please submit an Issue on the project GitHub repository.',
+  'help_contact_desc':
+      'For questions or suggestions, please submit an Issue on the project GitHub repository.',
+  'more_hint':
+      'Core monitoring stays in the bottom bar. Pricing, settings, and help are grouped here for a simpler phone layout.',
 };

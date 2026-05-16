@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import 'provider_adapter.dart';
@@ -13,11 +14,13 @@ class OpenRouterAdapter implements ProviderAdapter {
     required String apiKey,
   }) async {
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 20),
-      ));
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 20),
+        ),
+      );
 
       final response = await dio.get(
         '/auth/key',
@@ -31,12 +34,18 @@ class OpenRouterAdapter implements ProviderAdapter {
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data as Map<String, dynamic>;
-        final credits = data['data'] != null ? data['data']['credits'] : data['credits'];
+        final credits = data['data'] != null
+            ? data['data']['credits']
+            : data['credits'];
 
         return BalanceResult(
-          totalBalance: credits != null ? double.tryParse(credits.toString()) : null,
+          totalBalance: credits != null
+              ? double.tryParse(credits.toString())
+              : null,
           usedBalance: null,
-          remainingBalance: credits != null ? double.tryParse(credits.toString()) : null,
+          remainingBalance: credits != null
+              ? double.tryParse(credits.toString())
+              : null,
           grantedBalance: null,
           toppedUpBalance: null,
           currency: 'USD',
@@ -46,9 +55,9 @@ class OpenRouterAdapter implements ProviderAdapter {
         );
       }
     } on DioException catch (e) {
-      print('OpenRouter balance fetch error: ${e.message}');
+      debugPrint('OpenRouter balance fetch error: ${e.message}');
     } catch (e) {
-      print('OpenRouter balance fetch error: $e');
+      debugPrint('OpenRouter balance fetch error: $e');
     }
     return null;
   }
@@ -59,11 +68,13 @@ class OpenRouterAdapter implements ProviderAdapter {
     required String apiKey,
   }) async {
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 20),
-      ));
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 20),
+        ),
+      );
 
       final response = await dio.get(
         '/models',
@@ -80,17 +91,19 @@ class OpenRouterAdapter implements ProviderAdapter {
         final models = data['data'] as List<dynamic>?;
         if (models != null) {
           return models
-              .map((m) => ModelInfo(
-                    modelId: m['id'] as String,
-                    displayName: m['name'] as String?,
-                    providerType: 'openrouter',
-                    metadata: m as Map<String, dynamic>?,
-                  ))
+              .map(
+                (m) => ModelInfo(
+                  modelId: m['id'] as String,
+                  displayName: m['name'] as String?,
+                  providerType: 'openrouter',
+                  metadata: m as Map<String, dynamic>?,
+                ),
+              )
               .toList();
         }
       }
     } catch (e) {
-      print('OpenRouter models fetch error: $e');
+      debugPrint('OpenRouter models fetch error: $e');
     }
     return [];
   }

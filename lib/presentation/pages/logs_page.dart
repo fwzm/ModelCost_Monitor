@@ -103,10 +103,10 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '\${l10n.providerName(log.providerType.name)} \${_formatDateTime(log.requestTime)}',
+                        '${l10n.providerName(log.providerType.name)} ${_formatDateTime(log.requestTime)}',
                       ),
                       Text(
-                        'P: \${log.promptTokens ?? 0} | C: \${log.completionTokens ?? 0} | T: \${log.totalTokens ?? 0}',
+                        'P: ${log.promptTokens ?? 0} | C: ${log.completionTokens ?? 0} | T: ${log.totalTokens ?? 0}',
                       ),
                       if (log.estimated)
                         Text(
@@ -123,7 +123,9 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        log.cost != null ? '\$\${log.cost!.toStringAsFixed(4)}' : '-',
+                        log.cost != null
+                            ? '\$${log.cost!.toStringAsFixed(4)}'
+                            : '-',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
@@ -141,19 +143,27 @@ class _LogsPageState extends ConsumerState<LogsPage> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: \$e')),
+        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }
 
   List<UsageLog> _applyFilters(List<UsageLog> logs) {
     return logs.where((log) {
-      if (_filterProvider != null && log.providerType != _filterProvider) return false;
+      if (_filterProvider != null && log.providerType != _filterProvider) {
+        return false;
+      }
       if (_filterModel != null && log.modelName != _filterModel) return false;
-      if (_filterFrom != null && log.requestTime.isBefore(_filterFrom!)) return false;
-      if (_filterTo != null && log.requestTime.isAfter(_filterTo!)) return false;
+      if (_filterFrom != null && log.requestTime.isBefore(_filterFrom!)) {
+        return false;
+      }
+      if (_filterTo != null && log.requestTime.isAfter(_filterTo!)) {
+        return false;
+      }
       if (_filterEstimatedOnly && !log.estimated) return false;
-      if (_filterStatus != null && log.requestStatus != _filterStatus) return false;
+      if (_filterStatus != null && log.requestStatus != _filterStatus) {
+        return false;
+      }
       return true;
     }).toList();
   }
@@ -210,14 +220,16 @@ class _LogsPageState extends ConsumerState<LogsPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<ProviderType?>(
-                  value: _filterProvider,
+                  initialValue: _filterProvider,
                   decoration: InputDecoration(labelText: l10n.filterProvider),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All')),
-                    ...ProviderType.values.map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(l10n.providerName(type.name)),
-                        )),
+                    ...ProviderType.values.map(
+                      (type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(l10n.providerName(type.name)),
+                      ),
+                    ),
                   ],
                   onChanged: (value) {
                     setDialogState(() {
@@ -273,7 +285,6 @@ class _LogsPageState extends ConsumerState<LogsPage> {
     if (usageLogs.isEmpty) return;
 
     final filteredLogs = _applyFilters(usageLogs);
-    final l10n = L10nLocalizations.of(context);
 
     if (type == 'csv') {
       final csvData = _exportToCsv(filteredLogs);
@@ -284,60 +295,85 @@ class _LogsPageState extends ConsumerState<LogsPage> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Export completed')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Export completed')));
     }
   }
 
   String _exportToCsv(List<UsageLog> logs) {
     final csvData = [
-      ['ID', 'Provider', 'Model', 'Request Time', 'Prompt Tokens', 'Completion Tokens', 'Cached Tokens', 'Reasoning Tokens', 'Total Tokens', 'Estimated', 'Cost', 'Currency', 'Status', 'Source'],
-      ...logs.map((log) => [
-            log.id,
-            log.providerType.name,
-            log.modelName,
-            log.requestTime.toIso8601String(),
-            log.promptTokens ?? 0,
-            log.completionTokens ?? 0,
-            log.cachedTokens ?? 0,
-            log.reasoningTokens ?? 0,
-            log.totalTokens ?? 0,
-            log.estimated,
-            log.cost ?? 0.0,
-            log.currency,
-            log.requestStatus.name,
-            log.source.name,
-          ]),
+      [
+        'ID',
+        'Provider',
+        'Model',
+        'Request Time',
+        'Prompt Tokens',
+        'Completion Tokens',
+        'Cached Tokens',
+        'Reasoning Tokens',
+        'Total Tokens',
+        'Estimated',
+        'Cost',
+        'Currency',
+        'Status',
+        'Source',
+      ],
+      ...logs.map(
+        (log) => [
+          log.id,
+          log.providerType.name,
+          log.modelName,
+          log.requestTime.toIso8601String(),
+          log.promptTokens ?? 0,
+          log.completionTokens ?? 0,
+          log.cachedTokens ?? 0,
+          log.reasoningTokens ?? 0,
+          log.totalTokens ?? 0,
+          log.estimated,
+          log.cost ?? 0.0,
+          log.currency,
+          log.requestStatus.name,
+          log.source.name,
+        ],
+      ),
     ];
     return const ListToCsvConverter().convert(csvData);
   }
 
   String _exportToJson(List<UsageLog> logs) {
-    final data = logs.map((log) => {
-          'id': log.id,
-          'provider': log.providerType.name,
-          'model': log.modelName,
-          'requestTime': log.requestTime.toIso8601String(),
-          'promptTokens': log.promptTokens,
-          'completionTokens': log.completionTokens,
-          'cachedTokens': log.cachedTokens,
-          'reasoningTokens': log.reasoningTokens,
-          'totalTokens': log.totalTokens,
-          'estimated': log.estimated,
-          'lowConfidence': log.lowConfidence,
-          'cost': log.cost,
-          'currency': log.currency,
-          'status': log.requestStatus.name,
-          'source': log.source.name,
-          'createdAt': log.createdAt.toIso8601String(),
-        }).toList();
+    final data = logs
+        .map(
+          (log) => {
+            'id': log.id,
+            'provider': log.providerType.name,
+            'model': log.modelName,
+            'requestTime': log.requestTime.toIso8601String(),
+            'promptTokens': log.promptTokens,
+            'completionTokens': log.completionTokens,
+            'cachedTokens': log.cachedTokens,
+            'reasoningTokens': log.reasoningTokens,
+            'totalTokens': log.totalTokens,
+            'estimated': log.estimated,
+            'lowConfidence': log.lowConfidence,
+            'cost': log.cost,
+            'currency': log.currency,
+            'status': log.requestStatus.name,
+            'source': log.source.name,
+            'createdAt': log.createdAt.toIso8601String(),
+          },
+        )
+        .toList();
     return const JsonEncoder.withIndent('  ').convert(data);
   }
 
-  Future<void> _saveFile(String content, String fileName, String mimeType) async {
+  Future<void> _saveFile(
+    String content,
+    String fileName,
+    String mimeType,
+  ) async {
     final result = await FilePicker.platform.saveFile(
-      dialogTitle: 'Save \$fileName',
+      dialogTitle: 'Save $fileName',
       fileName: fileName,
       type: FileType.custom,
       allowedExtensions: [fileName.split('.').last],
@@ -350,7 +386,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return '\${dateTime.year}-\${dateTime.month.toString().padLeft(2, '0')}-\${dateTime.day.toString().padLeft(2, '0')} '
-        '\${dateTime.hour.toString().padLeft(2, '0')}:\${dateTime.minute.toString().padLeft(2, '0')}';
+    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }

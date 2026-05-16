@@ -1,10 +1,8 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:drift/drift.dart' show Value;
 
 import '../../data/database/database.dart';
 import '../models/models.dart';
-import 'tray_service.dart';
-import 'notification_service.dart';
-import 'proxy_lifecycle_service.dart';
 
 export 'secure_storage_service.dart';
 export 'tray_service.dart';
@@ -14,9 +12,7 @@ export 'proxy_lifecycle_service.dart';
 class SecureStorageService {
   static const _prefix = 'api_key_';
   final _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: AndroidOptions(),
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
     ),
@@ -70,13 +66,27 @@ class AccountService {
   Future<int> createAccount(AccountsCompanion account, String apiKey) async {
     final id = await database.insertAccount(account);
     await secureStorage.storeApiKey(id, apiKey);
+    await database.updateAccount(
+      id,
+      AccountsCompanion(apiKeyAlias: Value(secureStorage.maskApiKey(apiKey))),
+    );
     return id;
   }
 
-  Future<int> updateAccount(int id, AccountsCompanion account, [String? newApiKey]) async {
+  Future<int> updateAccount(
+    int id,
+    AccountsCompanion account, [
+    String? newApiKey,
+  ]) async {
     final result = await database.updateAccount(id, account);
     if (newApiKey != null && newApiKey.isNotEmpty) {
       await secureStorage.storeApiKey(id, newApiKey);
+      await database.updateAccount(
+        id,
+        AccountsCompanion(
+          apiKeyAlias: Value(secureStorage.maskApiKey(newApiKey)),
+        ),
+      );
     }
     return result;
   }
@@ -100,7 +110,10 @@ class BalanceService {
     return database.getLatestBalance(accountId);
   }
 
-  Future<List<BalanceSnapshot>> getBalanceHistory(int accountId, {int limit = 10}) {
+  Future<List<BalanceSnapshot>> getBalanceHistory(
+    int accountId, {
+    int limit = 10,
+  }) {
     return database.getBalanceSnapshotsByAccount(accountId, limit: limit);
   }
 
@@ -142,7 +155,9 @@ class UsageService {
       to: DateTime.now(),
       limit: 10000,
     );
-    return logs.where((l) => l.cost != null).fold<double>(0.0, (sum, l) => sum + l.cost!);
+    return logs
+        .where((l) => l.cost != null)
+        .fold<double>(0.0, (sum, l) => sum + l.cost!);
   }
 
   Future<double> getMonthCost({int? accountId}) async {
@@ -154,7 +169,9 @@ class UsageService {
       to: DateTime.now(),
       limit: 10000,
     );
-    return logs.where((l) => l.cost != null).fold<double>(0.0, (sum, l) => sum + l.cost!);
+    return logs
+        .where((l) => l.cost != null)
+        .fold<double>(0.0, (sum, l) => sum + l.cost!);
   }
 }
 
@@ -173,6 +190,10 @@ class PricingService {
 
   Future<int> addPrice(ModelPricesCompanion price) {
     return database.insertModelPrice(price);
+  }
+
+  Future<int> upsertPrice(ModelPricesCompanion price) {
+    return database.upsertModelPrice(price);
   }
 
   Future<int> updatePrice(int id, ModelPricesCompanion price) {

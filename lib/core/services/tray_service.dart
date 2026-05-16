@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:tray_manager/tray_manager.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../../l10n/l10n.dart';
 import '../models/models.dart';
@@ -69,51 +68,36 @@ class TrayService with TrayListener {
 
   Future<void> _updateMenu() async {
     final l10n = L10nLocalizations.of(navigatorKey.currentContext!);
-    
+
     final menu = Menu(
       items: [
         MenuItem(
-          label: '\${l10n.proxyStatusStopped}: \${_getStateText(l10n)}',
+          label: '${l10n.proxyStatusStopped}: ${_getStateText(l10n)}',
           disabled: true,
         ),
         MenuItem.separator(),
         MenuItem(
-          label: '\${l10n.todayCost}: \$\${_todayCost.toStringAsFixed(4)}',
+          label: '${l10n.todayCost}: \$${_todayCost.toStringAsFixed(4)}',
           disabled: true,
         ),
         MenuItem(
-          label: '\${l10n.monthCost}: \$\${_monthCost.toStringAsFixed(4)}',
+          label: '${l10n.monthCost}: \$${_monthCost.toStringAsFixed(4)}',
           disabled: true,
         ),
         MenuItem(
-          label: '\${l10n.totalAccounts}: \$_accountCount',
+          label: '${l10n.totalAccounts}: $_accountCount',
           disabled: true,
         ),
         MenuItem.separator(),
-        MenuItem(
-          label: '\${l10n.currentProxyUrl}: \$_proxyUrl',
-          disabled: true,
-        ),
+        MenuItem(label: '${l10n.currentProxyUrl}: $_proxyUrl', disabled: true),
         MenuItem.separator(),
         if (_currentState == ProxyState.running)
-          MenuItem(
-            key: 'stop_proxy',
-            label: l10n.proxyStop,
-          )
+          MenuItem(key: 'stop_proxy', label: l10n.proxyStop)
         else
-          MenuItem(
-            key: 'start_proxy',
-            label: l10n.proxyStart,
-          ),
+          MenuItem(key: 'start_proxy', label: l10n.proxyStart),
         MenuItem.separator(),
-        MenuItem(
-          key: 'show_window',
-          label: L10n.of('show_window'),
-        ),
-        MenuItem(
-          key: 'quit',
-          label: L10n.of('quit'),
-        ),
+        MenuItem(key: 'show_window', label: L10n.of('show_window')),
+        MenuItem(key: 'quit', label: L10n.of('quit')),
       ],
     );
 
@@ -124,9 +108,9 @@ class TrayService with TrayListener {
     final l10n = L10nLocalizations.of(navigatorKey.currentContext!);
     final stateText = _getStateText(l10n);
     await trayManager.setToolTip(
-      'ModelCost Monitor - \$stateText\n'
-      '\${l10n.todayCost}: \$\${_todayCost.toStringAsFixed(4)}\n'
-      '\${l10n.monthCost}: \$\${_monthCost.toStringAsFixed(4)}',
+      'ModelCost Monitor - $stateText\n'
+      '${l10n.todayCost}: \$${_todayCost.toStringAsFixed(4)}\n'
+      '${l10n.monthCost}: \$${_monthCost.toStringAsFixed(4)}',
     );
   }
 

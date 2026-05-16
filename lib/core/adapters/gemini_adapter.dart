@@ -19,9 +19,21 @@ class GeminiAdapter implements ProviderAdapter {
     required String apiKey,
   }) async {
     return [
-      ModelInfo(modelId: 'gemini-2.0-flash', displayName: 'Gemini 2.0 Flash', providerType: 'gemini'),
-      ModelInfo(modelId: 'gemini-2.0-pro', displayName: 'Gemini 2.0 Pro', providerType: 'gemini'),
-      ModelInfo(modelId: 'gemini-1.5-pro', displayName: 'Gemini 1.5 Pro', providerType: 'gemini'),
+      ModelInfo(
+        modelId: 'gemini-2.0-flash',
+        displayName: 'Gemini 2.0 Flash',
+        providerType: 'gemini',
+      ),
+      ModelInfo(
+        modelId: 'gemini-2.0-pro',
+        displayName: 'Gemini 2.0 Pro',
+        providerType: 'gemini',
+      ),
+      ModelInfo(
+        modelId: 'gemini-1.5-pro',
+        displayName: 'Gemini 1.5 Pro',
+        providerType: 'gemini',
+      ),
     ];
   }
 
@@ -33,7 +45,8 @@ class GeminiAdapter implements ProviderAdapter {
     required String source,
   }) {
     try {
-      final usageMetadata = responseJson['usageMetadata'] as Map<String, dynamic>?;
+      final usageMetadata =
+          responseJson['usageMetadata'] as Map<String, dynamic>?;
       if (usageMetadata == null) {
         return UsageParseResult(
           promptTokens: null,

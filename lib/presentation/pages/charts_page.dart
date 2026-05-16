@@ -22,9 +22,7 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
     final usageLogsAsync = ref.watch(usageLogsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.navCharts),
-      ),
+      appBar: AppBar(title: Text(l10n.navCharts)),
       body: Column(
         children: [
           SingleChildScrollView(
@@ -48,7 +46,7 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
             child: usageLogsAsync.when(
               data: (logs) => _buildSelectedChart(logs),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: \$e')),
+              error: (e, _) => Center(child: Text('Error: $e')),
             ),
           ),
         ],
@@ -61,7 +59,9 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
     return ElevatedButton(
       onPressed: () => setState(() => _selectedChart = index),
       style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? Theme.of(context).colorScheme.primary : null,
+        backgroundColor: isSelected
+            ? Theme.of(context).colorScheme.primary
+            : null,
         foregroundColor: isSelected ? Colors.white : null,
       ),
       child: Text(label),
@@ -91,7 +91,8 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
 
     for (final log in logs) {
       if (log.cost == null) continue;
-      final dateKey = '\${log.requestTime.year}-\${log.requestTime.month.toString().padLeft(2, '0')}-\${log.requestTime.day.toString().padLeft(2, '0')}';
+      final dateKey =
+          '${log.requestTime.year}-${log.requestTime.month.toString().padLeft(2, '0')}-${log.requestTime.day.toString().padLeft(2, '0')}';
       dailyCost[dateKey] = (dailyCost[dateKey] ?? 0) + log.cost!;
     }
 
@@ -106,7 +107,10 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.chartDailyCost, style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            l10n.chartDailyCost,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: spots.isEmpty
@@ -115,20 +119,31 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
                     LineChartData(
                       gridData: const FlGridData(show: true),
                       titlesData: FlTitlesData(
-                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                        leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: true),
+                        ),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
                             getTitlesWidget: (value, meta) {
                               final index = value.toInt();
-                              if (index < 0 || index >= sortedKeys.length) return const Text('');
+                              if (index < 0 || index >= sortedKeys.length) {
+                                return const Text('');
+                              }
                               final parts = sortedKeys[index].split('-');
-                              return Text('\${parts[1]}-\${parts[2]}', style: const TextStyle(fontSize: 10));
+                              return Text(
+                                '${parts[1]}-${parts[2]}',
+                                style: const TextStyle(fontSize: 10),
+                              );
                             },
                           ),
                         ),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
                       ),
                       borderData: FlBorderData(show: true),
                       lineBarsData: [
@@ -161,13 +176,22 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
       modelCost[log.modelName] = (modelCost[log.modelName] ?? 0) + log.cost!;
     }
 
-    final sortedEntries = modelCost.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final sortedEntries = modelCost.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     final sections = sortedEntries.asMap().entries.map((entry) {
-      final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.red, Colors.teal];
+      final colors = [
+        Colors.blue,
+        Colors.green,
+        Colors.orange,
+        Colors.purple,
+        Colors.red,
+        Colors.teal,
+      ];
       return PieChartSectionData(
         color: colors[entry.key % colors.length],
         value: entry.value.value,
-        title: '\${(entry.value.value * 100 / (modelCost.values.fold(0.0, (a, b) => a + b))).toStringAsFixed(1)}%',
+        title:
+            '${(entry.value.value * 100 / (modelCost.values.fold(0.0, (a, b) => a + b))).toStringAsFixed(1)}%',
         radius: 100,
         titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
       );
@@ -178,7 +202,10 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.chartModelCost, style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            l10n.chartModelCost,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: sections.isEmpty
@@ -198,7 +225,14 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
                         spacing: 16,
                         runSpacing: 8,
                         children: sortedEntries.asMap().entries.map((entry) {
-                          final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.red, Colors.teal];
+                          final colors = [
+                            Colors.blue,
+                            Colors.green,
+                            Colors.orange,
+                            Colors.purple,
+                            Colors.red,
+                            Colors.teal,
+                          ];
                           return Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -208,7 +242,9 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
                                 color: colors[entry.key % colors.length],
                               ),
                               const SizedBox(width: 4),
-                              Text('\${entry.value.key}: \$\${entry.value.value.toStringAsFixed(4)}'),
+                              Text(
+                                '${entry.value.key}: \$${entry.value.value.toStringAsFixed(4)}',
+                              ),
                             ],
                           );
                         }).toList(),
@@ -227,9 +263,12 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
     final dailyCompletion = <String, int>{};
 
     for (final log in logs) {
-      final dateKey = '\${log.requestTime.year}-\${log.requestTime.month.toString().padLeft(2, '0')}-\${log.requestTime.day.toString().padLeft(2, '0')}';
-      dailyPrompt[dateKey] = (dailyPrompt[dateKey] ?? 0) + (log.promptTokens ?? 0);
-      dailyCompletion[dateKey] = (dailyCompletion[dateKey] ?? 0) + (log.completionTokens ?? 0);
+      final dateKey =
+          '${log.requestTime.year}-${log.requestTime.month.toString().padLeft(2, '0')}-${log.requestTime.day.toString().padLeft(2, '0')}';
+      dailyPrompt[dateKey] =
+          (dailyPrompt[dateKey] ?? 0) + (log.promptTokens ?? 0);
+      dailyCompletion[dateKey] =
+          (dailyCompletion[dateKey] ?? 0) + (log.completionTokens ?? 0);
     }
 
     final sortedKeys = dailyPrompt.keys.toList()..sort();
@@ -237,8 +276,12 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
     final completionSpots = <FlSpot>[];
 
     for (int i = 0; i < sortedKeys.length; i++) {
-      promptSpots.add(FlSpot(i.toDouble(), dailyPrompt[sortedKeys[i]]!.toDouble()));
-      completionSpots.add(FlSpot(i.toDouble(), dailyCompletion[sortedKeys[i]]!.toDouble()));
+      promptSpots.add(
+        FlSpot(i.toDouble(), dailyPrompt[sortedKeys[i]]!.toDouble()),
+      );
+      completionSpots.add(
+        FlSpot(i.toDouble(), dailyCompletion[sortedKeys[i]]!.toDouble()),
+      );
     }
 
     return Padding(
@@ -246,7 +289,10 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.chartTokenComparison, style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            l10n.chartTokenComparison,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: promptSpots.isEmpty
@@ -255,20 +301,31 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
                     LineChartData(
                       gridData: const FlGridData(show: true),
                       titlesData: FlTitlesData(
-                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                        leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: true),
+                        ),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
                             getTitlesWidget: (value, meta) {
                               final index = value.toInt();
-                              if (index < 0 || index >= sortedKeys.length) return const Text('');
+                              if (index < 0 || index >= sortedKeys.length) {
+                                return const Text('');
+                              }
                               final parts = sortedKeys[index].split('-');
-                              return Text('\${parts[1]}-\${parts[2]}', style: const TextStyle(fontSize: 10));
+                              return Text(
+                                '${parts[1]}-${parts[2]}',
+                                style: const TextStyle(fontSize: 10),
+                              );
                             },
                           ),
                         ),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
                       ),
                       borderData: FlBorderData(show: true),
                       lineBarsData: [
@@ -310,7 +367,8 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
 
     for (final log in logs) {
       if (log.cost == null) continue;
-      final dateKey = '\${log.requestTime.year}-\${log.requestTime.month.toString().padLeft(2, '0')}-\${log.requestTime.day.toString().padLeft(2, '0')}';
+      final dateKey =
+          '${log.requestTime.year}-${log.requestTime.month.toString().padLeft(2, '0')}-${log.requestTime.day.toString().padLeft(2, '0')}';
       dailyCost[dateKey] = (dailyCost[dateKey] ?? 0) + log.cost!;
     }
 
@@ -337,7 +395,10 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.chartFeeTrend, style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            l10n.chartFeeTrend,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: bars.isEmpty
@@ -346,20 +407,31 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
                     BarChartData(
                       gridData: const FlGridData(show: true),
                       titlesData: FlTitlesData(
-                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                        leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: true),
+                        ),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
                             getTitlesWidget: (value, meta) {
                               final index = value.toInt();
-                              if (index < 0 || index >= sortedKeys.length) return const Text('');
+                              if (index < 0 || index >= sortedKeys.length) {
+                                return const Text('');
+                              }
                               final parts = sortedKeys[index].split('-');
-                              return Text('\${parts[1]}-\${parts[2]}', style: const TextStyle(fontSize: 10));
+                              return Text(
+                                '${parts[1]}-${parts[2]}',
+                                style: const TextStyle(fontSize: 10),
+                              );
                             },
                           ),
                         ),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
                       ),
                       borderData: FlBorderData(show: false),
                       barGroups: bars,
@@ -377,7 +449,8 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
     final dailyOfficial = <String, int>{};
 
     for (final log in logs) {
-      final dateKey = '\${log.requestTime.year}-\${log.requestTime.month.toString().padLeft(2, '0')}-\${log.requestTime.day.toString().padLeft(2, '0')}';
+      final dateKey =
+          '${log.requestTime.year}-${log.requestTime.month.toString().padLeft(2, '0')}-${log.requestTime.day.toString().padLeft(2, '0')}';
       if (log.estimated) {
         dailyEstimated[dateKey] = (dailyEstimated[dateKey] ?? 0) + 1;
       } else {
@@ -385,13 +458,18 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
       }
     }
 
-    final allKeys = {...dailyEstimated.keys, ...dailyOfficial.keys}.toList()..sort();
+    final allKeys = {...dailyEstimated.keys, ...dailyOfficial.keys}.toList()
+      ..sort();
     final estimatedSpots = <FlSpot>[];
     final officialSpots = <FlSpot>[];
 
     for (int i = 0; i < allKeys.length; i++) {
-      estimatedSpots.add(FlSpot(i.toDouble(), (dailyEstimated[allKeys[i]] ?? 0).toDouble()));
-      officialSpots.add(FlSpot(i.toDouble(), (dailyOfficial[allKeys[i]] ?? 0).toDouble()));
+      estimatedSpots.add(
+        FlSpot(i.toDouble(), (dailyEstimated[allKeys[i]] ?? 0).toDouble()),
+      );
+      officialSpots.add(
+        FlSpot(i.toDouble(), (dailyOfficial[allKeys[i]] ?? 0).toDouble()),
+      );
     }
 
     return Padding(
@@ -399,7 +477,10 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.chartEstimatedVsOfficial, style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            l10n.chartEstimatedVsOfficial,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: estimatedSpots.isEmpty && officialSpots.isEmpty
@@ -408,20 +489,31 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
                     LineChartData(
                       gridData: const FlGridData(show: true),
                       titlesData: FlTitlesData(
-                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                        leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: true),
+                        ),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
                             getTitlesWidget: (value, meta) {
                               final index = value.toInt();
-                              if (index < 0 || index >= allKeys.length) return const Text('');
+                              if (index < 0 || index >= allKeys.length) {
+                                return const Text('');
+                              }
                               final parts = allKeys[index].split('-');
-                              return Text('\${parts[1]}-\${parts[2]}', style: const TextStyle(fontSize: 10));
+                              return Text(
+                                '${parts[1]}-${parts[2]}',
+                                style: const TextStyle(fontSize: 10),
+                              );
                             },
                           ),
                         ),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
                       ),
                       borderData: FlBorderData(show: true),
                       lineBarsData: [
@@ -461,11 +553,7 @@ class _ChartsPageState extends ConsumerState<ChartsPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 12,
-          height: 12,
-          color: color,
-        ),
+        Container(width: 12, height: 12, color: color),
         const SizedBox(width: 4),
         Text(label),
       ],

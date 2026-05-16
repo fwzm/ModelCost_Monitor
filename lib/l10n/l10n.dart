@@ -72,6 +72,7 @@ class L10nLocalizations {
   String get navLogs => L10n.of('nav_logs');
   String get navCharts => L10n.of('nav_charts');
   String get navSettings => L10n.of('nav_settings');
+  String get navMore => L10n.of('nav_more');
 
   String get proxyStatusStopped => L10n.of('proxy_status_stopped');
   String get proxyStatusStarting => L10n.of('proxy_status_starting');
@@ -195,7 +196,8 @@ class L10nLocalizations {
   String get notificationProxyStopped => L10n.of('notification_proxy_stopped');
   String get notificationStopProxy => L10n.of('notification_stop_proxy');
   String get notificationLowBalance => L10n.of('notification_low_balance');
-  String get notificationBudgetExceeded => L10n.of('notification_budget_exceeded');
+  String get notificationBudgetExceeded =>
+      L10n.of('notification_budget_exceeded');
 
   String get widgetTitle => L10n.of('widget_title');
   String get widgetToday => L10n.of('widget_today');
