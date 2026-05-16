@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../l10n/l10n.dart';
+import '../theme/app_theme.dart';
 
 class HelpPage extends StatelessWidget {
   const HelpPage({super.key});
@@ -13,206 +14,350 @@ class HelpPage extends StatelessWidget {
         title: Text(l10n.navHelp),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppTheme.spaceL),
         children: [
-          _buildSection(
-            context,
+          // ── 软件简介 ──
+          _ChapterCard(
+            icon: Icons.info_outline_rounded,
+            color: AppTheme.info,
+            title: l10n.helpOverviewTitle,
+            children: [
+              _BodyText(l10n.helpOverviewDesc),
+              const SizedBox(height: AppTheme.spaceM),
+              _BulletItem(l10n.helpOverviewFeature1),
+              _BulletItem(l10n.helpOverviewFeature2),
+              _BulletItem(l10n.helpOverviewFeature3),
+              _BulletItem(l10n.helpOverviewFeature4),
+              _BulletItem(l10n.helpOverviewFeature5),
+              _BulletItem(l10n.helpOverviewFeature6),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 快速开始 ──
+          _ChapterCard(
+            icon: Icons.rocket_launch_rounded,
+            color: AppTheme.success,
             title: l10n.helpQuickStart,
-            icon: Icons.rocket_launch,
             children: [
-              _buildStep(context, '1', l10n.helpStep1AddAccount),
-              _buildStep(context, '2', l10n.helpStep2ConfigPrice),
-              _buildStep(context, '3', l10n.helpStep3StartProxy),
-              _buildStep(context, '4', l10n.helpStep4UseProxy),
+              _StepItem('1', l10n.helpStep1AddAccount),
+              _StepItem('2', l10n.helpStep2ConfigPrice),
+              _StepItem('3', l10n.helpStep3StartProxy),
+              _StepItem('4', l10n.helpStep4UseProxy),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            context,
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 总览页面 ──
+          _ChapterCard(
+            icon: Icons.space_dashboard_rounded,
+            color: AppTheme.seedColor,
             title: l10n.helpDashboardTitle,
-            icon: Icons.dashboard,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpDashboardDesc,
-                Icons.info_outline,
-              ),
+              _BodyText(l10n.helpDashboardDesc),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpDashboardProxyCard),
+              const SizedBox(height: AppTheme.spaceS),
+              _SubSection(l10n.helpDashboardStats),
+              const SizedBox(height: AppTheme.spaceS),
+              _SubSection(l10n.helpDashboardActivity),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            context,
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 账号管理 ──
+          _ChapterCard(
+            icon: Icons.cloud_rounded,
+            color: AppTheme.deepseekBrand,
             title: l10n.helpAccountsTitle,
-            icon: Icons.cloud,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpAccountsDesc,
-                Icons.info_outline,
-              ),
+              _BodyText(l10n.helpAccountsDesc),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubTitle(l10n.addAccount),
+              const SizedBox(height: AppTheme.spaceXS),
+              _BodyText(l10n.helpAccountsAdd),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubTitle(l10n.editAccount),
+              const SizedBox(height: AppTheme.spaceXS),
+              _BodyText(l10n.helpAccountsManage),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            context,
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 价格配置 ──
+          _ChapterCard(
+            icon: Icons.price_change_rounded,
+            color: AppTheme.openrouterBrand,
             title: l10n.helpPricingTitle,
-            icon: Icons.price_change,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpPricingDesc,
-                Icons.info_outline,
-              ),
+              _BodyText(l10n.helpPricingDesc),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpPricingWhy),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubTitle(l10n.addPrice),
+              const SizedBox(height: AppTheme.spaceXS),
+              _BodyText(l10n.helpPricingAdd),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpPricingView),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            context,
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 请求日志 ──
+          _ChapterCard(
+            icon: Icons.receipt_long_rounded,
+            color: AppTheme.mimoBrand,
             title: l10n.helpLogsTitle,
-            icon: Icons.receipt_long,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpLogsDesc,
-                Icons.info_outline,
-              ),
+              _BodyText(l10n.helpLogsDesc),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpLogsFilter),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpLogsRecord),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpLogsExport),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            context,
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 图表分析 ──
+          _ChapterCard(
+            icon: Icons.bar_chart_rounded,
+            color: AppTheme.geminiBrand,
             title: l10n.helpChartsTitle,
-            icon: Icons.bar_chart,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpChartsDesc,
-                Icons.info_outline,
-              ),
+              _BodyText(l10n.helpChartsDesc),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpChartsTypes),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            context,
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 本地代理 ──
+          _ChapterCard(
+            icon: Icons.router_rounded,
+            color: AppTheme.warning,
             title: l10n.helpProxyTitle,
-            icon: Icons.router,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpProxyDesc,
-                Icons.info_outline,
-              ),
+              _BodyText(l10n.helpProxyDesc),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpProxyHow),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpProxySetup),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpProxyHttps),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpProxyLan),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpProxyCors),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            context,
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 设置选项 ──
+          _ChapterCard(
+            icon: Icons.settings_rounded,
+            color: Colors.grey,
             title: l10n.helpSettingsTitle,
-            icon: Icons.settings,
             children: [
-              _buildInfoCard(
-                context,
-                l10n.helpSettingsDesc,
-                Icons.info_outline,
-              ),
+              _BodyText(l10n.helpSettingsDesc),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpSettingsProxy),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpSettingsBudget),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpSettingsSystem),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpSettingsLang),
+              const SizedBox(height: AppTheme.spaceM),
+              _SubSection(l10n.helpSettingsSecurity),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            context,
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 常见问题 ──
+          _ChapterCard(
+            icon: Icons.help_outline_rounded,
+            color: AppTheme.error,
             title: l10n.helpFaqTitle,
-            icon: Icons.help,
             children: [
-              _buildFaqItem(context, l10n.helpFaq1Q, l10n.helpFaq1A),
-              _buildFaqItem(context, l10n.helpFaq2Q, l10n.helpFaq2A),
-              _buildFaqItem(context, l10n.helpFaq3Q, l10n.helpFaq3A),
-              _buildFaqItem(context, l10n.helpFaq4Q, l10n.helpFaq4A),
+              _FaqItem(question: l10n.helpFaq1Q, answer: l10n.helpFaq1A),
+              _FaqItem(question: l10n.helpFaq2Q, answer: l10n.helpFaq2A),
+              _FaqItem(question: l10n.helpFaq3Q, answer: l10n.helpFaq3A),
+              _FaqItem(question: l10n.helpFaq4Q, answer: l10n.helpFaq4A),
+              _FaqItem(question: l10n.helpFaq5Q, answer: l10n.helpFaq5A),
+              _FaqItem(question: l10n.helpFaq6Q, answer: l10n.helpFaq6A),
+              _FaqItem(question: l10n.helpFaq7Q, answer: l10n.helpFaq7A),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            context,
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 使用技巧 ──
+          _ChapterCard(
+            icon: Icons.lightbulb_rounded,
+            color: Colors.amber,
             title: l10n.helpTipsTitle,
-            icon: Icons.lightbulb,
             children: [
-              _buildTip(context, l10n.helpTip1),
-              _buildTip(context, l10n.helpTip2),
-              _buildTip(context, l10n.helpTip3),
-              _buildTip(context, l10n.helpTip4),
+              _TipItem(l10n.helpTip1),
+              _TipItem(l10n.helpTip2),
+              _TipItem(l10n.helpTip3),
+              _TipItem(l10n.helpTip4),
+              _TipItem(l10n.helpTip5),
+              _TipItem(l10n.helpTip6),
             ],
           ),
-          const SizedBox(height: 32),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.info, color: Colors.blue),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.helpContactTitle,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(l10n.helpContactDesc),
-                ],
-              ),
-            ),
+          const SizedBox(height: AppTheme.spaceM),
+
+          // ── 联系我们 ──
+          _ChapterCard(
+            icon: Icons.mail_outline_rounded,
+            color: AppTheme.info,
+            title: l10n.helpContactTitle,
+            children: [
+              _BodyText(l10n.helpContactDesc),
+            ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: AppTheme.spaceXXL),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSection(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
+// ── 章节卡片 ──
+class _ChapterCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final List<Widget> children;
+
+  const _ChapterCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spaceL),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusM),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ]),
+          const SizedBox(height: AppTheme.spaceL),
+          ...children,
+        ],
       ),
     );
   }
+}
 
-  Widget _buildStep(BuildContext context, String number, String text) {
+// ── 正文文本（支持 \n 换行） ──
+class _BodyText extends StatelessWidget {
+  final String text;
+  const _BodyText(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            height: 1.6,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+    );
+  }
+}
+
+// ── 子标题 ──
+class _SubTitle extends StatelessWidget {
+  final String text;
+  const _SubTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+    );
+  }
+}
+
+// ── 子段落 ──
+class _SubSection extends StatelessWidget {
+  final String text;
+  const _SubSection(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppTheme.spaceM),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppTheme.radiusS),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              height: 1.7,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+      ),
+    );
+  }
+}
+
+// ── 步骤条 ──
+class _StepItem extends StatelessWidget {
+  final String number;
+  final String text;
+  const _StepItem(this.number, this.text);
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 24,
-            height: 24,
+            width: 26,
+            height: 26,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              gradient: LinearGradient(
+                colors: [AppTheme.seedColor, AppTheme.seedColor.withValues(alpha: 0.7)],
+              ),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -221,55 +366,123 @@ class HelpPage extends StatelessWidget {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 13,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppTheme.spaceM),
           Expanded(
-            child: Text(text),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildInfoCard(BuildContext context, String text, IconData icon) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: Colors.grey),
-        const SizedBox(width: 8),
-        Expanded(child: Text(text)),
-      ],
-    );
-  }
+// ── 列表项 ──
+class _BulletItem extends StatelessWidget {
+  final String text;
+  const _BulletItem(this.text);
 
-  Widget _buildFaqItem(BuildContext context, String question, String answer) {
-    return ExpansionTile(
-      title: Text(
-        question,
-        style: const TextStyle(fontWeight: FontWeight.w500),
-      ),
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Text(answer),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTip(BuildContext context, String tip) {
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.star, size: 16, color: Colors.amber),
-          const SizedBox(width: 8),
-          Expanded(child: Text(tip)),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: AppTheme.seedColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppTheme.spaceS),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── FAQ 可展开项 ──
+class _FaqItem extends StatelessWidget {
+  final String question;
+  final String answer;
+  const _FaqItem({required this.question, required this.answer});
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(
+          left: AppTheme.spaceL,
+          bottom: AppTheme.spaceS,
+        ),
+        dense: true,
+        title: Row(
+          children: [
+            Icon(Icons.help_outline_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                question,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Text(
+            answer,
+            style: TextStyle(fontSize: 13, height: 1.7, color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 使用技巧条目 ──
+class _TipItem extends StatelessWidget {
+  final String text;
+  const _TipItem(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(Icons.tips_and_updates_rounded, size: 16, color: Colors.amber[700]),
+          ),
+          const SizedBox(width: AppTheme.spaceS),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+            ),
+          ),
         ],
       ),
     );

@@ -3,8 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:tray_manager/tray_manager.dart';
-import 'package:window_manager/window_manager.dart';
-
 import '../../l10n/l10n.dart';
 import '../models/models.dart';
 
@@ -15,10 +13,6 @@ class TrayService with TrayListener {
 
   bool _initialized = false;
   ProxyState _currentState = ProxyState.stopped;
-  String _proxyUrl = 'http://127.0.0.1:8787';
-  double _todayCost = 0.0;
-  double _monthCost = 0.0;
-  int _accountCount = 0;
 
   VoidCallback? onProxyStart;
   VoidCallback? onProxyStop;
@@ -36,7 +30,12 @@ class TrayService with TrayListener {
       }
       await trayManager.setToolTip('ModelCost Monitor');
       trayManager.addListener(this);
-      await _updateMenu();
+      await _updateMenu(
+        proxyUrl: 'http://127.0.0.1:8787',
+        todayCost: 0.0,
+        monthCost: 0.0,
+        accountCount: 0,
+      );
       _initialized = true;
     } catch (e) {
       debugPrint('Failed to initialize tray: $e');
@@ -58,16 +57,25 @@ class TrayService with TrayListener {
     int? accountCount,
   }) async {
     _currentState = state;
-    _proxyUrl = proxyUrl;
-    if (todayCost != null) _todayCost = todayCost;
-    if (monthCost != null) _monthCost = monthCost;
-    if (accountCount != null) _accountCount = accountCount;
 
-    await _updateMenu();
-    await _updateTooltip();
+    await _updateMenu(
+      proxyUrl: proxyUrl,
+      todayCost: todayCost ?? 0.0,
+      monthCost: monthCost ?? 0.0,
+      accountCount: accountCount ?? 0,
+    );
+    await _updateTooltip(
+      todayCost: todayCost ?? 0.0,
+      monthCost: monthCost ?? 0.0,
+    );
   }
 
-  Future<void> _updateMenu() async {
+  Future<void> _updateMenu({
+    required String proxyUrl,
+    required double todayCost,
+    required double monthCost,
+    required int accountCount,
+  }) async {
     final l10n = L10nLocalizations.of(navigatorKey.currentContext!);
     
     final menu = Menu(
@@ -78,20 +86,20 @@ class TrayService with TrayListener {
         ),
         MenuItem.separator(),
         MenuItem(
-          label: '\${l10n.todayCost}: \$\${_todayCost.toStringAsFixed(4)}',
+          label: '\${l10n.todayCost}: \$\${todayCost.toStringAsFixed(4)}',
           disabled: true,
         ),
         MenuItem(
-          label: '\${l10n.monthCost}: \$\${_monthCost.toStringAsFixed(4)}',
+          label: '\${l10n.monthCost}: \$\${monthCost.toStringAsFixed(4)}',
           disabled: true,
         ),
         MenuItem(
-          label: '\${l10n.totalAccounts}: \$_accountCount',
+          label: '\${l10n.totalAccounts}: $accountCount',
           disabled: true,
         ),
         MenuItem.separator(),
         MenuItem(
-          label: '\${l10n.currentProxyUrl}: \$_proxyUrl',
+          label: '\${l10n.currentProxyUrl}: $proxyUrl',
           disabled: true,
         ),
         MenuItem.separator(),
@@ -120,16 +128,20 @@ class TrayService with TrayListener {
     await trayManager.setContextMenu(menu);
   }
 
-  Future<void> _updateTooltip() async {
+  Future<void> _updateTooltip({
+    required double todayCost,
+    required double monthCost,
+  }) async {
+    // ignore: unused_local_variable
     final l10n = L10nLocalizations.of(navigatorKey.currentContext!);
-    final stateText = _getStateText(l10n);
     await trayManager.setToolTip(
-      'ModelCost Monitor - \$stateText\n'
-      '\${l10n.todayCost}: \$\${_todayCost.toStringAsFixed(4)}\n'
-      '\${l10n.monthCost}: \$\${_monthCost.toStringAsFixed(4)}',
+      'ModelCost Monitor - \${_getStateText(l10n)}\n'
+      '\${l10n.todayCost}: \$\${todayCost.toStringAsFixed(4)}\n'
+      '\${l10n.monthCost}: \$\${monthCost.toStringAsFixed(4)}',
     );
   }
 
+  // ignore: unused_element
   String _getStateText(L10nLocalizations l10n) {
     switch (_currentState) {
       case ProxyState.running:

@@ -21,11 +21,11 @@ part 'database.g.dart';
   SchemaMigrationLogs,
   ProxyRuntimeLogs,
 ])
-class AppDatabase extends _\$AppDatabase {
-  AppDatabase(super.e);
+class AppDatabase extends _$AppDatabase {
+  AppDatabase() : super(_openConnection());
 
   factory AppDatabase.connect() {
-    return AppDatabase(_openConnection());
+    return AppDatabase();
   }
 
   @override
@@ -92,7 +92,7 @@ class AppDatabase extends _\$AppDatabase {
     for (final (type, balance, models, usage, streaming, manual, baseUrl) in capabilities) {
       await into(providerCapabilities).insert(
         ProviderCapabilitiesCompanion.insert(
-          providerType: type,
+          providerType: type.name,
           supportsBalanceQuery: Value(balance),
           supportsModelList: Value(models),
           supportsUsageParsing: Value(usage),
@@ -200,9 +200,9 @@ class AppDatabase extends _\$AppDatabase {
 
   Future<List<ModelPrice>> getAllModelPrices() => select(modelPrices).get();
 
-  Future<ModelPrice?> getModelPrice(ProviderType providerType, String modelName) {
+  Future<ModelPrice?> getModelPrice(String providerType, String modelName) {
     return (select(modelPrices)
-          ..where((t) => t.providerType.equalsValue(providerType) & t.modelName.equals(modelName)))
+          ..where((t) => t.providerType.equals(providerType) & t.modelName.equals(modelName)))
         .getSingleOrNull();
   }
 

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:json_path/json_path.dart';
 
 import '../models/models.dart';
@@ -57,7 +58,7 @@ class CustomOpenAIAdapter implements ProviderAdapter {
         }
       }
     } catch (e) {
-      print('Custom OpenAI models fetch error: $e');
+      debugPrint('Custom OpenAI models fetch error: $e');
     }
     return [];
   }
@@ -76,16 +77,17 @@ class CustomOpenAIAdapter implements ProviderAdapter {
       int? cachedTokens;
       int? reasoningTokens;
 
-      if (_jsonPathMappings != null && _jsonPathMappings!.isNotEmpty) {
-        final promptPath = _jsonPathMappings!['prompt_tokens'];
+      final mappings = _jsonPathMappings;
+      if (mappings != null && mappings.isNotEmpty) {
+        final promptPath = mappings['prompt_tokens'];
         if (promptPath != null) {
           promptTokens = _extractIntByPath(responseJson, promptPath);
         }
-        final completionPath = _jsonPathMappings!['completion_tokens'];
+        final completionPath = mappings['completion_tokens'];
         if (completionPath != null) {
           completionTokens = _extractIntByPath(responseJson, completionPath);
         }
-        final totalPath = _jsonPathMappings!['total_tokens'];
+        final totalPath = mappings['total_tokens'];
         if (totalPath != null) {
           totalTokens = _extractIntByPath(responseJson, totalPath);
         }
@@ -134,7 +136,7 @@ class CustomOpenAIAdapter implements ProviderAdapter {
         if (value is String) return int.tryParse(value);
       }
     } catch (e) {
-      print('JSONPath extract error for $path: $e');
+      debugPrint('JSONPath extract error for $path: $e');
     }
     return null;
   }

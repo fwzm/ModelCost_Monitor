@@ -20,7 +20,6 @@ class ProxyLifecycleService {
   Timer? _healthCheckTimer;
   Timer? _balanceCheckTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
-  bool _isResumed = false;
   int _restartAttempts = 0;
   static const int _maxRestartAttempts = 3;
 
@@ -102,7 +101,6 @@ class ProxyLifecycleService {
   void _handleProxyEvent(ProxyStatusEvent event) {
     if (event is ProxyStarted) {
       _restartAttempts = 0;
-      _isResumed = true;
       onStateChanged?.call(ProxyState.running, _proxyManager.actualUrl);
     } else if (event is ProxyStopped) {
       onStateChanged?.call(ProxyState.stopped, _proxyManager.actualUrl);
@@ -141,14 +139,13 @@ class ProxyLifecycleService {
   }
 
   void _onAppResumed() {
-    _isResumed = true;
     if (_proxyManager.state == ProxyState.running) {
       _performHealthCheck();
     }
   }
 
   void _onAppPaused() {
-    _isResumed = false;
+    // App paused - health check will run on resume
   }
 
   void _onAppDetached() {

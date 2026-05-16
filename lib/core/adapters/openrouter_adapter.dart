@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import 'provider_adapter.dart';
@@ -46,9 +47,9 @@ class OpenRouterAdapter implements ProviderAdapter {
         );
       }
     } on DioException catch (e) {
-      print('OpenRouter balance fetch error: ${e.message}');
+      debugPrint('OpenRouter balance fetch error: ${e.message}');
     } catch (e) {
-      print('OpenRouter balance fetch error: $e');
+      debugPrint('OpenRouter balance fetch error: $e');
     }
     return null;
   }
@@ -90,7 +91,7 @@ class OpenRouterAdapter implements ProviderAdapter {
         }
       }
     } catch (e) {
-      print('OpenRouter models fetch error: $e');
+      debugPrint('OpenRouter models fetch error: $e');
     }
     return [];
   }

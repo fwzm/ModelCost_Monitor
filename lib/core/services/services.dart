@@ -2,9 +2,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../data/database/database.dart';
 import '../models/models.dart';
-import 'tray_service.dart';
-import 'notification_service.dart';
-import 'proxy_lifecycle_service.dart';
 
 export 'secure_storage_service.dart';
 export 'tray_service.dart';
@@ -14,9 +11,7 @@ export 'proxy_lifecycle_service.dart';
 class SecureStorageService {
   static const _prefix = 'api_key_';
   final _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: AndroidOptions(),
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
     ),
@@ -168,7 +163,7 @@ class PricingService {
   }
 
   Future<ModelPrice?> getPrice(ProviderType providerType, String modelName) {
-    return database.getModelPrice(providerType, modelName);
+    return database.getModelPrice(providerType.name, modelName);
   }
 
   Future<int> addPrice(ModelPricesCompanion price) {
