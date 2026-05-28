@@ -35,6 +35,14 @@ class MyApp extends ConsumerWidget {
     return 'Noto Sans SC';
   }
 
+  static const _fontFamilyFallback = <String>[
+    'Microsoft YaHei',
+    'Noto Sans SC',
+    'PingFang SC',
+    'Noto Sans CJK SC',
+    'sans-serif',
+  ];
+
   ThemeData _buildTheme(Brightness brightness) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF4F46E5),
@@ -42,13 +50,31 @@ class MyApp extends ConsumerWidget {
     );
     final isDark = brightness == Brightness.dark;
     final surfaceTint = isDark ? const Color(0xFF93C5FD) : colorScheme.primary;
-    final fontFamily = _chineseFontFamily;
+
+    final baseTextTheme = Typography.material2021(
+      platform: Platform.isAndroid
+          ? TargetPlatform.android
+          : Platform.isIOS
+          ? TargetPlatform.iOS
+          : Platform.isWindows
+          ? TargetPlatform.windows
+          : Platform.isMacOS
+          ? TargetPlatform.macOS
+          : TargetPlatform.linux,
+    );
+    final brightnessTheme = isDark ? baseTextTheme.white : baseTextTheme.black;
+    final textTheme = brightnessTheme.apply(
+      fontFamily: _chineseFontFamily,
+      fontFamilyFallback: _fontFamilyFallback,
+    );
 
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
-      fontFamily: fontFamily,
+      fontFamily: _chineseFontFamily,
+      fontFamilyFallback: _fontFamilyFallback,
+      textTheme: textTheme,
       scaffoldBackgroundColor: Color.alphaBlend(
         surfaceTint.withValues(alpha: isDark ? 0.03 : 0.025),
         colorScheme.surface,
@@ -60,7 +86,7 @@ class MyApp extends ConsumerWidget {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: colorScheme.onSurface,
-        titleTextStyle: TextStyle(
+        titleTextStyle: textTheme.titleLarge?.copyWith(
           color: colorScheme.onSurface,
           fontSize: 20,
           fontWeight: FontWeight.w700,
@@ -135,7 +161,7 @@ class MyApp extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) => TextStyle(
+          (states) => textTheme.labelSmall?.copyWith(
             fontSize: 12,
             fontWeight: states.contains(WidgetState.selected)
                 ? FontWeight.w700
@@ -150,11 +176,11 @@ class MyApp extends ConsumerWidget {
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        selectedLabelTextStyle: TextStyle(
+        selectedLabelTextStyle: textTheme.bodyMedium?.copyWith(
           color: colorScheme.primary,
           fontWeight: FontWeight.w700,
         ),
-        unselectedLabelTextStyle: TextStyle(
+        unselectedLabelTextStyle: textTheme.bodyMedium?.copyWith(
           color: colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w500,
         ),

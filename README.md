@@ -237,7 +237,7 @@ Windows MVP 已包含：
 - 指标卡、导航栏、按钮、输入框和列表圆角统一，提升桌面端与移动端一致性。
 - 账号页加入更友好的首次使用空状态、悬浮添加按钮和信息密度更高的账号卡片。
 - 代理状态显示优化：停止时不再显示"已暂停"标签，崩溃时显示"已崩溃"并可点击查看详细原因和解决方案。
-- 中文字体优化：Windows 使用微软雅黑、Android 使用思源黑体，消除宋体回退导致的繁体字感。
+- 中文字体优化：Windows 使用微软雅黑、Android 使用思源黑体，通过 TextTheme.apply 全局统一字体族和粗细，消除宋体回退和粗细不一致问题。
 - 内置价格表大幅扩充：新增 OpenAI（GPT-4.1/o3/o4-mini）、Claude（4 Opus/4 Sonnet）、Grok（3/3-mini）、通义千问、智谱 GLM、MiniMax、Kimi、硅基流动、Groq、Mistral、Perplexity、Cohere、火山方舟、腾讯混元等主流模型价格，并更新 Gemini 至 3.1 Pro / 3.5 Flash。
 
 后续重点：
