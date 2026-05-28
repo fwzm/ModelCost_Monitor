@@ -239,6 +239,14 @@ const Map<String, String> zhCN = {
   'copy': '复制',
   'error_starting_proxy': '启动代理出错',
   'error_proxy_crashed': '代理已崩溃，请尝试重启',
+  'crash_dialog_reason': '崩溃原因',
+  'crash_dialog_solution': '建议解决方案',
+  'crash_solution_port_in_use':
+      '端口被其他程序占用，请尝试：\n1. 关闭占用该端口的程序\n2. 在设置中修改代理端口\n3. 重启应用后重试',
+  'crash_solution_permission':
+      '权限不足，请尝试：\n1. 以管理员身份运行应用\n2. 检查防火墙设置\n3. 确认端口未被系统保护',
+  'crash_solution_timeout':
+      '连接超时，请尝试：\n1. 检查网络连接\n2. 确认 API 服务可访问\n3. 增加超时时间设置',
   'port_in_use': '端口被占用',
   'auto_switch_port': '已自动切换到端口',
   'sleep_wake_recovered': '系统唤醒后代理已恢复',

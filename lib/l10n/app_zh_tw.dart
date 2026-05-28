@@ -239,6 +239,14 @@ const Map<String, String> zhTW = {
   'copy': '複製',
   'error_starting_proxy': '啟動代理出錯',
   'error_proxy_crashed': '代理已崩潰，請嘗試重啟',
+  'crash_dialog_reason': '崩潰原因',
+  'crash_dialog_solution': '建議解決方案',
+  'crash_solution_port_in_use':
+      '端口被其他程序佔用，請嘗試：\n1. 關閉佔用該端口的程序\n2. 在設置中修改代理端口\n3. 重啟應用後重試',
+  'crash_solution_permission':
+      '權限不足，請嘗試：\n1. 以管理員身份運行應用\n2. 檢查防火牆設置\n3. 確認端口未被系統保護',
+  'crash_solution_timeout':
+      '連線逾時，請嘗試：\n1. 檢查網路連線\n2. 確認 API 服務可訪問\n3. 增加逾時時間設置',
   'port_in_use': '端口被佔用',
   'auto_switch_port': '已自動切換到端口',
   'sleep_wake_recovered': '系統喚醒後代理已恢復',

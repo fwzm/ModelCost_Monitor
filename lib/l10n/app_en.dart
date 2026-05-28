@@ -262,6 +262,14 @@ const Map<String, String> en = {
   'copy': 'Copy',
   'error_starting_proxy': 'Error starting proxy',
   'error_proxy_crashed': 'Proxy has crashed, please try restarting',
+  'crash_dialog_reason': 'Crash Reason',
+  'crash_dialog_solution': 'Suggested Solution',
+  'crash_solution_port_in_use':
+      'The port is occupied by another program. Try:\n1. Close the program using this port\n2. Change the proxy port in Settings\n3. Restart the app and try again',
+  'crash_solution_permission':
+      'Insufficient permissions. Try:\n1. Run the app as administrator\n2. Check firewall settings\n3. Ensure the port is not system-protected',
+  'crash_solution_timeout':
+      'Connection timed out. Try:\n1. Check your network connection\n2. Verify the API service is accessible\n3. Increase the timeout setting',
   'port_in_use': 'Port is in use',
   'auto_switch_port': 'Automatically switched to port',
   'sleep_wake_recovered': 'Proxy recovered after system wake',

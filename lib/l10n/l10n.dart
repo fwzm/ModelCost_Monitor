@@ -231,6 +231,11 @@ class L10nLocalizations {
 
   String get errorStartingProxy => L10n.of('error_starting_proxy');
   String get errorProxyCrashed => L10n.of('error_proxy_crashed');
+  String get crashDialogReason => L10n.of('crash_dialog_reason');
+  String get crashDialogSolution => L10n.of('crash_dialog_solution');
+  String get crashSolutionPortInUse => L10n.of('crash_solution_port_in_use');
+  String get crashSolutionPermission => L10n.of('crash_solution_permission');
+  String get crashSolutionTimeout => L10n.of('crash_solution_timeout');
   String get portInUse => L10n.of('port_in_use');
   String get autoSwitchPort => L10n.of('auto_switch_port');
   String get sleepWakeRecovered => L10n.of('sleep_wake_recovered');

@@ -21,6 +21,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   late final ProxyIsolateManager _proxyManager;
   ProxyState _proxyState = ProxyState.stopped;
   String _proxyUrl = 'http://127.0.0.1:8787';
+  String? _lastCrashError;
 
   @override
   void initState() {
@@ -33,11 +34,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     _proxyManager.onEvent = _handleProxyEvent;
     _proxyManager.onError = (error) {
       if (!mounted) return;
-      final l10n = L10nLocalizations.of(context);
-      setState(() => _proxyState = ProxyState.crashed);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${l10n.errorStartingProxy}: $error')),
-      );
+      setState(() {
+        _proxyState = ProxyState.crashed;
+        _lastCrashError = error.toString();
+      });
     };
     _loadProxySettings();
   }
@@ -173,18 +173,22 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
       if (!mounted) return;
       if (success) {
+        setState(() => _lastCrashError = null);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l10n.proxyStarted)));
       } else {
-        setState(() => _proxyState = ProxyState.crashed);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.proxyStartFailed)));
+        setState(() {
+          _proxyState = ProxyState.crashed;
+          _lastCrashError = l10n.proxyStartFailed;
+        });
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _proxyState = ProxyState.crashed);
+      setState(() {
+        _proxyState = ProxyState.crashed;
+        _lastCrashError = e.toString();
+      });
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('${l10n.errorStartingProxy}: $e')));
@@ -308,6 +312,90 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
+  void _showCrashDialog() {
+    final l10n = L10nLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final errorDetail = _lastCrashError ?? l10n.errorProxyCrashed;
+
+    String solution = '';
+    if (errorDetail.contains('address already in use') ||
+        errorDetail.contains('Address already in use') ||
+        errorDetail.contains('bind')) {
+      solution = L10n.of('crash_solution_port_in_use');
+    } else if (errorDetail.contains('permission') ||
+        errorDetail.contains('Permission')) {
+      solution = L10n.of('crash_solution_permission');
+    } else if (errorDetail.contains('timeout') ||
+        errorDetail.contains('Timeout')) {
+      solution = L10n.of('crash_solution_timeout');
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          icon: Icon(Icons.error, color: colorScheme.error, size: 36),
+          title: Text(l10n.proxyStatusCrashed),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  L10n.of('crash_dialog_reason'),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SelectableText(
+                    errorDetail,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontFamily: 'monospace',
+                      color: colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+                if (solution.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    L10n.of('crash_dialog_solution'),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(solution, style: Theme.of(context).textTheme.bodyMedium),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _startProxy();
+              },
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.proxyRestart),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _pathPrefixForAccount(AccountConfig account) {
     if (account.providerType == ProviderType.customOpenAI) {
       return '/proxy/custom/${account.accountId}';
@@ -397,6 +485,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               stateText: _stateText(),
               stateIcon: _stateIcon(),
               isRunning: _proxyState == ProxyState.running,
+              isStopped: _proxyState == ProxyState.stopped,
+              isCrashed: _proxyState == ProxyState.crashed,
               isBusy:
                   _proxyState == ProxyState.starting ||
                   _proxyState == ProxyState.stopping,
@@ -404,6 +494,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               onStop: _stopProxy,
               onCopy: _copyProxyUrl,
               onGuide: _showUsageGuide,
+              onCrashTap: _showCrashDialog,
             ),
             const SizedBox(height: 16),
             if (accounts.isEmpty || logs.isEmpty) ...[
@@ -521,22 +612,28 @@ class _ProxyHero extends StatelessWidget {
   final String stateText;
   final IconData stateIcon;
   final bool isRunning;
+  final bool isStopped;
+  final bool isCrashed;
   final bool isBusy;
   final VoidCallback onStart;
   final VoidCallback onStop;
   final VoidCallback onCopy;
   final VoidCallback onGuide;
+  final VoidCallback onCrashTap;
 
   const _ProxyHero({
     required this.proxyUrl,
     required this.stateText,
     required this.stateIcon,
     required this.isRunning,
+    required this.isStopped,
+    required this.isCrashed,
     required this.isBusy,
     required this.onStart,
     required this.onStop,
     required this.onCopy,
     required this.onGuide,
+    required this.onCrashTap,
   });
 
   @override
@@ -629,11 +726,16 @@ class _ProxyHero extends StatelessWidget {
               alignment: stacked ? WrapAlignment.start : WrapAlignment.end,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                _StatusPill(
-                  icon: stateIcon,
-                  text: stateText,
-                  color: foreground,
-                ),
+                if (!isStopped)
+                  GestureDetector(
+                    onTap: isCrashed ? onCrashTap : null,
+                    child: _StatusPill(
+                      icon: stateIcon,
+                      text: stateText,
+                      color: foreground,
+                      isCrashed: isCrashed,
+                    ),
+                  ),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: foreground,
@@ -677,11 +779,13 @@ class _StatusPill extends StatelessWidget {
   final IconData icon;
   final String text;
   final Color color;
+  final bool isCrashed;
 
   const _StatusPill({
     required this.icon,
     required this.text,
     required this.color,
+    this.isCrashed = false,
   });
 
   @override
@@ -689,9 +793,15 @@ class _StatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
+        color: isCrashed
+            ? color.withValues(alpha: 0.22)
+            : color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.38)),
+        border: Border.all(
+          color: isCrashed
+              ? color.withValues(alpha: 0.55)
+              : color.withValues(alpha: 0.38),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -702,6 +812,10 @@ class _StatusPill extends StatelessWidget {
             text,
             style: TextStyle(color: color, fontWeight: FontWeight.w700),
           ),
+          if (isCrashed) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.info_outline, color: color, size: 14),
+          ],
         ],
       ),
     );
