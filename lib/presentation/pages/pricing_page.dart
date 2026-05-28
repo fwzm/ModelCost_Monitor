@@ -301,9 +301,10 @@ class _PricingPageState extends ConsumerState<PricingPage> {
       ),
       body: pricesAsync.when(
         data: (prices) {
+          final grouped = _groupByProvider(prices);
           return ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            itemCount: prices.length + 1,
+            itemCount: grouped.length + 1,
             itemBuilder: (context, index) {
               if (index == 0) {
                 return Padding(
@@ -317,12 +318,13 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                 );
               }
 
-              final price = prices[index - 1];
+              final entry = grouped[index - 1];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: _PriceTile(
-                  price: price,
-                  onDelete: () => _deletePrice(price.id),
+                child: _ProviderPriceGroup(
+                  providerType: entry.key,
+                  prices: entry.value,
+                  onDelete: _deletePrice,
                 ),
               );
             },
@@ -332,6 +334,17 @@ class _PricingPageState extends ConsumerState<PricingPage> {
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
+  }
+
+  List<MapEntry<ProviderType, List<ModelPrice>>> _groupByProvider(
+    List<ModelPrice> prices,
+  ) {
+    final map = <ProviderType, List<ModelPrice>>{};
+    for (final price in prices) {
+      map.putIfAbsent(price.providerType, () => []).add(price);
+    }
+    return map.entries.toList()
+      ..sort((a, b) => a.key.index.compareTo(b.key.index));
   }
 }
 
@@ -414,166 +427,441 @@ class _PricingImportCard extends StatelessWidget {
   }
 }
 
-class _PriceTile extends StatelessWidget {
-  final ModelPrice price;
-  final VoidCallback onDelete;
+class _ProviderPriceGroup extends StatefulWidget {
+  final ProviderType providerType;
+  final List<ModelPrice> prices;
+  final ValueChanged<int> onDelete;
 
-  const _PriceTile({required this.price, required this.onDelete});
+  const _ProviderPriceGroup({
+    required this.providerType,
+    required this.prices,
+    required this.onDelete,
+  });
+
+  @override
+  State<_ProviderPriceGroup> createState() => _ProviderPriceGroupState();
+}
+
+class _ProviderPriceGroupState extends State<_ProviderPriceGroup> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10nLocalizations.of(context);
-    final color = _providerColor(price.providerType);
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = _providerColor(widget.providerType);
+    final providerName = l10n.providerName(widget.providerType.name);
+    final models = widget.prices;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    l10n.providerName(price.providerType.name),
-                    style: TextStyle(color: color, fontWeight: FontWeight.w800),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    price.modelName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _providerIcon(widget.providerType),
+                      color: color,
+                      size: 20,
                     ),
                   ),
-                ),
-                IconButton(
-                  tooltip: l10n.delete,
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: onDelete,
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _PriceChip(
-                  label: L10n.of('input_short'),
-                  value: price.inputPricePer1M,
-                  currency: price.currency,
-                ),
-                _PriceChip(
-                  label: L10n.of('output_short'),
-                  value: price.outputPricePer1M,
-                  currency: price.currency,
-                ),
-                if (price.cachedInputPricePer1M != null)
-                  _PriceChip(
-                    label: L10n.of('cached_short'),
-                    value: price.cachedInputPricePer1M!,
-                    currency: price.currency,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          providerName,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${models.length} ${l10n.navPricing}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
                   ),
-                if (price.reasoningOutputPricePer1M != null)
-                  _PriceChip(
-                    label: L10n.of('reasoning_short'),
-                    value: price.reasoningOutputPricePer1M!,
-                    currency: price.currency,
+                  _CompactSummary(models: models),
+                  const SizedBox(width: 8),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
-              ],
-            ),
-            if (price.sourceNote != null && price.sourceNote!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                price.sourceNote!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                ],
               ),
-            ],
-          ],
-        ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: _buildExpandedList(context, l10n, colorScheme),
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
+        ],
       ),
     );
   }
 
-  Color _providerColor(ProviderType type) {
-    switch (type) {
-      case ProviderType.deepseek:
-        return const Color(0xFF2563EB);
-      case ProviderType.openai:
-        return const Color(0xFF111827);
-      case ProviderType.anthropic:
-        return const Color(0xFF92400E);
-      case ProviderType.mimo:
-        return const Color(0xFF7C3AED);
-      case ProviderType.gemini:
-        return const Color(0xFF16A34A);
-      case ProviderType.openrouter:
-        return const Color(0xFFF97316);
-      case ProviderType.azureOpenAI:
-        return const Color(0xFF4F46E5);
-      case ProviderType.qwen:
-      case ProviderType.zhipu:
-      case ProviderType.siliconFlow:
-      case ProviderType.volcengineArk:
-      case ProviderType.tencentHunyuan:
-      case ProviderType.moonshot:
-        return const Color(0xFFDC2626);
-      case ProviderType.groq:
-      case ProviderType.mistral:
-      case ProviderType.togetherAI:
-      case ProviderType.fireworksAI:
-      case ProviderType.perplexity:
-      case ProviderType.xai:
-      case ProviderType.cohere:
-      case ProviderType.cerebras:
-      case ProviderType.minimax:
-      case ProviderType.novita:
-        return const Color(0xFF6D28D9);
-      case ProviderType.customOpenAI:
-        return const Color(0xFF0F766E);
-    }
+  Widget _buildExpandedList(
+    BuildContext context,
+    L10nLocalizations l10n,
+    ColorScheme colorScheme,
+  ) {
+    return Column(
+      children: [
+        Divider(
+          height: 1,
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+        for (int i = 0; i < widget.prices.length; i++) ...[
+          _CompactModelRow(
+            price: widget.prices[i],
+            onDelete: () => widget.onDelete(widget.prices[i].id),
+          ),
+          if (i < widget.prices.length - 1)
+            Divider(
+              height: 1,
+              indent: 16,
+              endIndent: 16,
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+        ],
+      ],
+    );
   }
 }
 
-class _PriceChip extends StatelessWidget {
+class _CompactSummary extends StatelessWidget {
+  final List<ModelPrice> models;
+
+  const _CompactSummary({required this.models});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    double? minIn, maxIn, minOut, maxOut;
+    for (final m in models) {
+      minIn = minIn == null
+          ? m.inputPricePer1M
+          : (m.inputPricePer1M < minIn ? m.inputPricePer1M : minIn);
+      maxIn = maxIn == null
+          ? m.inputPricePer1M
+          : (m.inputPricePer1M > maxIn ? m.inputPricePer1M : maxIn);
+      minOut = minOut == null
+          ? m.outputPricePer1M
+          : (m.outputPricePer1M < minOut ? m.outputPricePer1M : minOut);
+      maxOut = maxOut == null
+          ? m.outputPricePer1M
+          : (m.outputPricePer1M > maxOut ? m.outputPricePer1M : maxOut);
+    }
+
+    String fmtRange(double? min, double? max) {
+      if (min == null) return '-';
+      if (max == null || min == max) return '\$${_fmt(min)}';
+      return '\$${_fmt(min)}~${_fmt(max)}';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'IN ',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                fmtRange(minIn, maxIn),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'OUT ',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                fmtRange(minOut, maxOut),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactModelRow extends StatelessWidget {
+  final ModelPrice price;
+  final VoidCallback onDelete;
+
+  const _CompactModelRow({required this.price, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10nLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final hasCached = price.cachedInputPricePer1M != null;
+    final hasReasoning = price.reasoningOutputPricePer1M != null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Text(
+              price.modelName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: _PriceTag(
+              label: l10n.inputShort,
+              value: price.inputPricePer1M,
+              currency: price.currency,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: _PriceTag(
+              label: l10n.outputShort,
+              value: price.outputPricePer1M,
+              currency: price.currency,
+            ),
+          ),
+          if (hasCached)
+            Expanded(
+              flex: 2,
+              child: _PriceTag(
+                label: l10n.cachedShort,
+                value: price.cachedInputPricePer1M!,
+                currency: price.currency,
+                muted: true,
+              ),
+            ),
+          if (hasReasoning)
+            Expanded(
+              flex: 2,
+              child: _PriceTag(
+                label: l10n.reasoningShort,
+                value: price.reasoningOutputPricePer1M!,
+                currency: price.currency,
+                muted: true,
+              ),
+            ),
+          SizedBox(
+            width: 32,
+            child: IconButton(
+              tooltip: l10n.delete,
+              icon: Icon(
+                Icons.close,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              onPressed: onDelete,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceTag extends StatelessWidget {
   final String label;
   final double value;
   final String currency;
+  final bool muted;
 
-  const _PriceChip({
+  const _PriceTag({
     required this.label,
     required this.value,
     required this.currency,
+    this.muted = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Text(
-        '$label $currency ${value.toStringAsFixed(value >= 1 ? 2 : 4)}/1M',
-        style: const TextStyle(fontWeight: FontWeight.w700),
-      ),
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          '\$${_fmt(value)}',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: muted ? colorScheme.onSurfaceVariant : colorScheme.onSurface,
+          ),
+        ),
+      ],
     );
+  }
+}
+
+String _fmt(double v) {
+  if (v == 0) return '0';
+  if (v >= 100) return v.toStringAsFixed(0);
+  if (v >= 1) return v.toStringAsFixed(2);
+  if (v >= 0.01) return v.toStringAsFixed(3);
+  return v.toStringAsFixed(4);
+}
+
+Color _providerColor(ProviderType type) {
+  switch (type) {
+    case ProviderType.deepseek:
+      return const Color(0xFF2563EB);
+    case ProviderType.openai:
+      return const Color(0xFF111827);
+    case ProviderType.anthropic:
+      return const Color(0xFF92400E);
+    case ProviderType.mimo:
+      return const Color(0xFF7C3AED);
+    case ProviderType.gemini:
+      return const Color(0xFF16A34A);
+    case ProviderType.openrouter:
+      return const Color(0xFFF97316);
+    case ProviderType.azureOpenAI:
+      return const Color(0xFF4F46E5);
+    case ProviderType.qwen:
+      return const Color(0xFFDC2626);
+    case ProviderType.zhipu:
+      return const Color(0xFF0891B2);
+    case ProviderType.siliconFlow:
+      return const Color(0xFF0D9488);
+    case ProviderType.volcengineArk:
+      return const Color(0xFFE11D48);
+    case ProviderType.tencentHunyuan:
+      return const Color(0xFF2563EB);
+    case ProviderType.moonshot:
+      return const Color(0xFF7C3AED);
+    case ProviderType.groq:
+      return const Color(0xFFF97316);
+    case ProviderType.mistral:
+      return const Color(0xFFDC2626);
+    case ProviderType.togetherAI:
+      return const Color(0xFF4F46E5);
+    case ProviderType.fireworksAI:
+      return const Color(0xFFE11D48);
+    case ProviderType.perplexity:
+      return const Color(0xFF0891B2);
+    case ProviderType.xai:
+      return const Color(0xFF111827);
+    case ProviderType.cohere:
+      return const Color(0xFF7C3AED);
+    case ProviderType.cerebras:
+      return const Color(0xFFF97316);
+    case ProviderType.minimax:
+      return const Color(0xFF0D9488);
+    case ProviderType.novita:
+      return const Color(0xFF2563EB);
+    case ProviderType.customOpenAI:
+      return const Color(0xFF0F766E);
+  }
+}
+
+IconData _providerIcon(ProviderType type) {
+  switch (type) {
+    case ProviderType.deepseek:
+      return Icons.language;
+    case ProviderType.openai:
+      return Icons.bubble_chart_outlined;
+    case ProviderType.anthropic:
+      return Icons.psychology_alt_outlined;
+    case ProviderType.mimo:
+      return Icons.phone_android;
+    case ProviderType.gemini:
+      return Icons.auto_awesome;
+    case ProviderType.openrouter:
+      return Icons.route;
+    case ProviderType.azureOpenAI:
+      return Icons.cloud_sync_outlined;
+    case ProviderType.qwen:
+    case ProviderType.zhipu:
+    case ProviderType.siliconFlow:
+    case ProviderType.volcengineArk:
+    case ProviderType.tencentHunyuan:
+    case ProviderType.moonshot:
+      return Icons.public;
+    case ProviderType.groq:
+    case ProviderType.mistral:
+    case ProviderType.togetherAI:
+    case ProviderType.fireworksAI:
+    case ProviderType.perplexity:
+    case ProviderType.xai:
+    case ProviderType.cohere:
+    case ProviderType.cerebras:
+    case ProviderType.minimax:
+    case ProviderType.novita:
+      return Icons.hub_outlined;
+    case ProviderType.customOpenAI:
+      return Icons.code;
   }
 }

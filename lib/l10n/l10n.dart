@@ -118,6 +118,10 @@ class L10nLocalizations {
   String get reasoningOutputPrice => L10n.of('reasoning_output_price');
   String get priceAdded => L10n.of('price_added');
   String get priceDeleted => L10n.of('price_deleted');
+  String get inputShort => L10n.of('input_short');
+  String get outputShort => L10n.of('output_short');
+  String get cachedShort => L10n.of('cached_short');
+  String get reasoningShort => L10n.of('reasoning_short');
 
   String get proxySettings => L10n.of('proxy_settings');
   String get proxyHost => L10n.of('proxy_host');
