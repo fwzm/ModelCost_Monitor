@@ -25,6 +25,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
   ProviderType _selectedProvider = ProviderType.deepseek;
   String _currency = 'USD';
   bool _isImporting = false;
+  _PricingViewMode _viewMode = _PricingViewMode.provider;
 
   @override
   void dispose() {
@@ -301,33 +302,111 @@ class _PricingPageState extends ConsumerState<PricingPage> {
       ),
       body: pricesAsync.when(
         data: (prices) {
-          final grouped = _groupByProvider(prices);
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            itemCount: grouped.length + 1,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+          if (prices.isEmpty) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                _PricingImportCard(
+                  isImporting: _isImporting,
+                  onApplyBuiltIn: _applyBuiltInPrices,
+                  onImportOpenRouter: _importOpenRouterPrices,
+                  onAddManual: _showAddPriceDialog,
+                ),
+              ],
+            );
+          }
+
+          final providerGroups = _groupByProvider(prices);
+          final modelGroups = _groupByModel(prices);
+
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: _PricingImportCard(
                     isImporting: _isImporting,
                     onApplyBuiltIn: _applyBuiltInPrices,
                     onImportOpenRouter: _importOpenRouterPrices,
                     onAddManual: _showAddPriceDialog,
                   ),
-                );
-              }
-
-              final entry = grouped[index - 1];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _ProviderPriceGroup(
-                  providerType: entry.key,
-                  prices: entry.value,
-                  onDelete: _deletePrice,
                 ),
-              );
-            },
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: _ViewModeToggle(
+                    mode: _viewMode,
+                    onChanged: (m) => setState(() => _viewMode = m),
+                  ),
+                ),
+              ),
+              if (_viewMode == _PricingViewMode.provider)
+                ...providerGroups.map((entry) {
+                  final providerName = l10n.providerName(entry.key.name);
+                  return SliverStickyGroup(
+                    headerKey: 'provider_${entry.key.name}',
+                    header: _StickyProviderHeader(
+                      providerType: entry.key,
+                      providerName: providerName,
+                      modelCount: entry.value.length,
+                      minIn: entry.value
+                          .map((p) => p.inputPricePer1M)
+                          .reduce((a, b) => a < b ? a : b),
+                      maxIn: entry.value
+                          .map((p) => p.inputPricePer1M)
+                          .reduce((a, b) => a > b ? a : b),
+                      minOut: entry.value
+                          .map((p) => p.outputPricePer1M)
+                          .reduce((a, b) => a < b ? a : b),
+                      maxOut: entry.value
+                          .map((p) => p.outputPricePer1M)
+                          .reduce((a, b) => a > b ? a : b),
+                    ),
+                    child: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _CompactModelRow(
+                            price: entry.value[index],
+                            onDelete: () => _deletePrice(entry.value[index].id),
+                          ),
+                        ),
+                        childCount: entry.value.length,
+                      ),
+                    ),
+                  );
+                })
+              else
+                ...modelGroups.map((entry) {
+                  return SliverStickyGroup(
+                    headerKey: 'model_${entry.key}',
+                    header: _StickyModelHeader(
+                      modelName: entry.key,
+                      providerCount: entry.value.length,
+                      minPrice: entry.value
+                          .map((p) => p.inputPricePer1M)
+                          .reduce((a, b) => a < b ? a : b),
+                      maxPrice: entry.value
+                          .map((p) => p.outputPricePer1M)
+                          .reduce((a, b) => a > b ? a : b),
+                    ),
+                    child: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _ModelProviderRow(
+                            price: entry.value[index],
+                            onDelete: () => _deletePrice(entry.value[index].id),
+                          ),
+                        ),
+                        childCount: entry.value.length,
+                      ),
+                    ),
+                  );
+                }),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -345,6 +424,18 @@ class _PricingPageState extends ConsumerState<PricingPage> {
     }
     return map.entries.toList()
       ..sort((a, b) => a.key.index.compareTo(b.key.index));
+  }
+
+  List<MapEntry<String, List<ModelPrice>>> _groupByModel(
+    List<ModelPrice> prices,
+  ) {
+    final map = <String, List<ModelPrice>>{};
+    for (final price in prices) {
+      map.putIfAbsent(price.modelName, () => []).add(price);
+    }
+    final entries = map.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return entries;
   }
 }
 
@@ -427,160 +518,327 @@ class _PricingImportCard extends StatelessWidget {
   }
 }
 
-class _ProviderPriceGroup extends StatefulWidget {
-  final ProviderType providerType;
-  final List<ModelPrice> prices;
-  final ValueChanged<int> onDelete;
+enum _PricingViewMode { provider, model }
 
-  const _ProviderPriceGroup({
-    required this.providerType,
-    required this.prices,
-    required this.onDelete,
-  });
+class _ViewModeToggle extends StatelessWidget {
+  final _PricingViewMode mode;
+  final ValueChanged<_PricingViewMode> onChanged;
 
-  @override
-  State<_ProviderPriceGroup> createState() => _ProviderPriceGroupState();
-}
-
-class _ProviderPriceGroupState extends State<_ProviderPriceGroup> {
-  bool _expanded = false;
+  const _ViewModeToggle({required this.mode, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    final l10n = L10nLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    final color = _providerColor(widget.providerType);
-    final providerName = l10n.providerName(widget.providerType.name);
-    final models = widget.prices;
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
         children: [
-          InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: BorderRadius.circular(18),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _providerIcon(widget.providerType),
-                      color: color,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          providerName,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${models.length} ${l10n.navPricing}',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _CompactSummary(models: models),
-                  const SizedBox(width: 8),
-                  AnimatedRotation(
-                    turns: _expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      Icons.expand_more,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _ToggleBtn(
+            icon: Icons.cloud_outlined,
+            label: L10n.of('view_by_provider'),
+            selected: mode == _PricingViewMode.provider,
+            onTap: () => onChanged(_PricingViewMode.provider),
           ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: _buildExpandedList(context, l10n, colorScheme),
-            crossFadeState: _expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
+          _ToggleBtn(
+            icon: Icons.smart_toy_outlined,
+            label: L10n.of('view_by_model'),
+            selected: mode == _PricingViewMode.model,
+            onTap: () => onChanged(_PricingViewMode.model),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildExpandedList(
-    BuildContext context,
-    L10nLocalizations l10n,
-    ColorScheme colorScheme,
-  ) {
-    return Column(
-      children: [
-        Divider(
-          height: 1,
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-        for (int i = 0; i < widget.prices.length; i++) ...[
-          _CompactModelRow(
-            price: widget.prices[i],
-            onDelete: () => widget.onDelete(widget.prices[i].id),
-          ),
-          if (i < widget.prices.length - 1)
-            Divider(
-              height: 1,
-              indent: 16,
-              endIndent: 16,
-              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-            ),
-        ],
-      ],
-    );
-  }
 }
 
-class _CompactSummary extends StatelessWidget {
-  final List<ModelPrice> models;
+class _ToggleBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
-  const _CompactSummary({required this.models});
+  const _ToggleBtn({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    double? minIn, maxIn, minOut, maxOut;
-    for (final m in models) {
-      minIn = minIn == null
-          ? m.inputPricePer1M
-          : (m.inputPricePer1M < minIn ? m.inputPricePer1M : minIn);
-      maxIn = maxIn == null
-          ? m.inputPricePer1M
-          : (m.inputPricePer1M > maxIn ? m.inputPricePer1M : maxIn);
-      minOut = minOut == null
-          ? m.outputPricePer1M
-          : (m.outputPricePer1M < minOut ? m.outputPricePer1M : minOut);
-      maxOut = maxOut == null
-          ? m.outputPricePer1M
-          : (m.outputPricePer1M > maxOut ? m.outputPricePer1M : maxOut);
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? colorScheme.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: colorScheme.shadow.withValues(alpha: 0.08),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: selected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                  color: selected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SliverStickyGroup extends StatelessWidget {
+  final String headerKey;
+  final Widget header;
+  final Widget child;
+
+  const SliverStickyGroup({
+    super.key,
+    required this.headerKey,
+    required this.header,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiSliver(
+      header: SliverPersistentHeader(
+        pinned: true,
+        delegate: _StickyDelegate(child: header),
+      ),
+      children: [child],
+    );
+  }
+}
+
+class MultiSliver extends StatelessWidget {
+  final Widget header;
+  final List<Widget> children;
+
+  const MultiSliver({super.key, required this.header, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverMainAxisGroup(slivers: [header, ...children]);
+  }
+}
+
+class _StickyDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _StickyDelegate({required this.child});
+
+  @override
+  double get maxExtent => 64;
+
+  @override
+  double get minExtent => 64;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
+      false;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ColoredBox(color: colorScheme.surface, child: child);
+  }
+}
+
+class _StickyProviderHeader extends StatelessWidget {
+  final ProviderType providerType;
+  final String providerName;
+  final int modelCount;
+  final double minIn, maxIn, minOut, maxOut;
+
+  const _StickyProviderHeader({
+    required this.providerType,
+    required this.providerName,
+    required this.modelCount,
+    required this.minIn,
+    required this.maxIn,
+    required this.minOut,
+    required this.maxOut,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = _providerColor(providerType);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(_providerIcon(providerType), color: color, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              providerName,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$modelCount',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _PriceRangeBadge(
+            minIn: minIn,
+            maxIn: maxIn,
+            minOut: minOut,
+            maxOut: maxOut,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StickyModelHeader extends StatelessWidget {
+  final String modelName;
+  final int providerCount;
+  final double minPrice, maxPrice;
+
+  const _StickyModelHeader({
+    required this.modelName,
+    required this.providerCount,
+    required this.minPrice,
+    required this.maxPrice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.smart_toy,
+              color: colorScheme.onPrimaryContainer,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              modelName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$providerCount ${L10n.of("providers_count")}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceRangeBadge extends StatelessWidget {
+  final double minIn, maxIn, minOut, maxOut;
+
+  const _PriceRangeBadge({
+    required this.minIn,
+    required this.maxIn,
+    required this.minOut,
+    required this.maxOut,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    String fmt(double v) {
+      if (v == 0) return '0';
+      if (v >= 100) return v.toStringAsFixed(0);
+      if (v >= 1) return v.toStringAsFixed(2);
+      return v.toStringAsFixed(3);
     }
 
-    String fmtRange(double? min, double? max) {
-      if (min == null) return '-';
-      if (max == null || min == max) return '\$${_fmt(min)}';
-      return '\$${_fmt(min)}~${_fmt(max)}';
-    }
+    String range(double min, double max) =>
+        min == max ? '\$${fmt(min)}' : '\$${fmt(min)}~${fmt(max)}';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -604,7 +862,7 @@ class _CompactSummary extends StatelessWidget {
                 ),
               ),
               Text(
-                fmtRange(minIn, maxIn),
+                range(minIn, maxIn),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -626,7 +884,7 @@ class _CompactSummary extends StatelessWidget {
                 ),
               ),
               Text(
-                fmtRange(minOut, maxOut),
+                range(minOut, maxOut),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -634,6 +892,105 @@ class _CompactSummary extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModelProviderRow extends StatelessWidget {
+  final ModelPrice price;
+  final VoidCallback onDelete;
+
+  const _ModelProviderRow({required this.price, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10nLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = _providerColor(price.providerType);
+    final hasCached = price.cachedInputPricePer1M != null;
+    final hasReasoning = price.reasoningOutputPricePer1M != null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _providerIcon(price.providerType),
+              color: color,
+              size: 14,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: Text(
+              l10n.providerName(price.providerType.name),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: _PriceTag(
+              label: l10n.inputShort,
+              value: price.inputPricePer1M,
+              currency: price.currency,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: _PriceTag(
+              label: l10n.outputShort,
+              value: price.outputPricePer1M,
+              currency: price.currency,
+            ),
+          ),
+          if (hasCached)
+            Expanded(
+              flex: 2,
+              child: _PriceTag(
+                label: l10n.cachedShort,
+                value: price.cachedInputPricePer1M!,
+                currency: price.currency,
+                muted: true,
+              ),
+            ),
+          if (hasReasoning)
+            Expanded(
+              flex: 2,
+              child: _PriceTag(
+                label: l10n.reasoningShort,
+                value: price.reasoningOutputPricePer1M!,
+                currency: price.currency,
+                muted: true,
+              ),
+            ),
+          SizedBox(
+            width: 32,
+            child: IconButton(
+              tooltip: l10n.delete,
+              icon: Icon(
+                Icons.close,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              onPressed: onDelete,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
           ),
         ],
       ),
