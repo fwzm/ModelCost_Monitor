@@ -39,7 +39,7 @@ class PricingPresetService {
           reasoningOutputPricePer1M: Value(preset.reasoningOutputPricePer1M),
           currency: Value(preset.currency),
           sourceNote: Value(preset.sourceNote),
-          effectiveFrom: Value(DateTime(2026, 5, 16)),
+          effectiveFrom: Value(DateTime(2026, 5, 27)),
         ),
       );
       imported++;

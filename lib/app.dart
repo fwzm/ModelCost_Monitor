@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,6 +27,14 @@ class MyApp extends ConsumerWidget {
     );
   }
 
+  static String get _chineseFontFamily {
+    if (Platform.isWindows) return 'Microsoft YaHei';
+    if (Platform.isAndroid) return 'Noto Sans SC';
+    if (Platform.isLinux) return 'Noto Sans CJK SC';
+    if (Platform.isMacOS) return 'PingFang SC';
+    return 'Noto Sans SC';
+  }
+
   ThemeData _buildTheme(Brightness brightness) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF4F46E5),
@@ -32,11 +42,13 @@ class MyApp extends ConsumerWidget {
     );
     final isDark = brightness == Brightness.dark;
     final surfaceTint = isDark ? const Color(0xFF93C5FD) : colorScheme.primary;
+    final fontFamily = _chineseFontFamily;
 
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
+      fontFamily: fontFamily,
       scaffoldBackgroundColor: Color.alphaBlend(
         surfaceTint.withValues(alpha: isDark ? 0.03 : 0.025),
         colorScheme.surface,
