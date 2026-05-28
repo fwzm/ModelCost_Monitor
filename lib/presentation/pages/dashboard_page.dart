@@ -9,7 +9,9 @@ import '../../l10n/l10n.dart';
 import '../../providers/providers.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
-  const DashboardPage({super.key});
+  final ValueChanged<int>? onNavigate;
+
+  const DashboardPage({super.key, this.onNavigate});
 
   @override
   ConsumerState<DashboardPage> createState() => _DashboardPageState();
@@ -207,6 +209,105 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     }
   }
 
+  void _goToPage(int index) {
+    widget.onNavigate?.call(index);
+  }
+
+  Future<void> _handleQuickStartProxy() async {
+    final accounts =
+        ref.read(accountsProvider).valueOrNull ?? const <Account>[];
+    if (accounts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(L10n.of('quick_need_account_first'))),
+      );
+      _goToPage(1);
+      return;
+    }
+
+    if (_proxyState == ProxyState.running) {
+      _showUsageGuide();
+      return;
+    }
+
+    await _startProxy();
+  }
+
+  void _showUsageGuide() {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.route_outlined, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(child: Text(L10n.of('usage_guide_title'))),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _GuideStep(number: 1, text: L10n.of('usage_guide_step_1')),
+                _GuideStep(
+                  number: 2,
+                  text: L10n.of(
+                    'usage_guide_step_2',
+                  ).replaceFirst('{url}', _proxyUrl),
+                ),
+                _GuideStep(number: 3, text: L10n.of('usage_guide_step_3')),
+                _GuideStep(number: 4, text: L10n.of('usage_guide_step_4')),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SelectableText(
+                    _proxyUrl,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(L10nLocalizations.of(context).cancel),
+            ),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _copyProxyUrl();
+              },
+              icon: const Icon(Icons.copy),
+              label: Text(L10nLocalizations.of(context).copyAddress),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _goToPage(3);
+              },
+              icon: const Icon(Icons.receipt_long_outlined),
+              label: Text(L10n.of('open_logs')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _pathPrefixForAccount(AccountConfig account) {
     if (account.providerType == ProviderType.customOpenAI) {
       return '/proxy/custom/${account.accountId}';
@@ -218,22 +319,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     return baseUrl.endsWith('/')
         ? baseUrl.substring(0, baseUrl.length - 1)
         : baseUrl;
-  }
-
-  Color _stateColor(ColorScheme colorScheme) {
-    switch (_proxyState) {
-      case ProxyState.running:
-        return const Color(0xFF16A34A);
-      case ProxyState.starting:
-      case ProxyState.stopping:
-        return const Color(0xFFCA8A04);
-      case ProxyState.degraded:
-        return const Color(0xFFF97316);
-      case ProxyState.crashed:
-        return colorScheme.error;
-      case ProxyState.stopped:
-        return colorScheme.onSurfaceVariant;
-    }
   }
 
   IconData _stateIcon() {
@@ -311,7 +396,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               proxyUrl: _proxyUrl,
               stateText: _stateText(),
               stateIcon: _stateIcon(),
-              stateColor: _stateColor(Theme.of(context).colorScheme),
               isRunning: _proxyState == ProxyState.running,
               isBusy:
                   _proxyState == ProxyState.starting ||
@@ -319,6 +403,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               onStart: _startProxy,
               onStop: _stopProxy,
               onCopy: _copyProxyUrl,
+              onGuide: _showUsageGuide,
             ),
             const SizedBox(height: 16),
             if (accounts.isEmpty || logs.isEmpty) ...[
@@ -326,6 +411,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 hasAccount: accounts.isNotEmpty,
                 hasUsage: logs.isNotEmpty,
                 proxyRunning: _proxyState == ProxyState.running,
+                onAccountTap: () => _goToPage(1),
+                onPricingTap: () => _goToPage(2),
+                onProxyTap: _handleQuickStartProxy,
+                onUsageTap: logs.isNotEmpty
+                    ? () => _goToPage(3)
+                    : _showUsageGuide,
+                onGuideTap: _showUsageGuide,
               ),
               const SizedBox(height: 16),
             ],
@@ -428,23 +520,23 @@ class _ProxyHero extends StatelessWidget {
   final String proxyUrl;
   final String stateText;
   final IconData stateIcon;
-  final Color stateColor;
   final bool isRunning;
   final bool isBusy;
   final VoidCallback onStart;
   final VoidCallback onStop;
   final VoidCallback onCopy;
+  final VoidCallback onGuide;
 
   const _ProxyHero({
     required this.proxyUrl,
     required this.stateText,
     required this.stateIcon,
-    required this.stateColor,
     required this.isRunning,
     required this.isBusy,
     required this.onStart,
     required this.onStop,
     required this.onCopy,
+    required this.onGuide,
   });
 
   @override
@@ -452,20 +544,48 @@ class _ProxyHero extends StatelessWidget {
     final l10n = L10nLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colorScheme.primary,
+            colorScheme.tertiary.withValues(alpha: 0.92),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.22),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final stacked = constraints.maxWidth < 720;
+            final foreground = colorScheme.onPrimary;
+            final subtleForeground = foreground.withValues(alpha: 0.76);
             final content = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.currentProxyUrl,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.bolt, color: foreground, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.currentProxyUrl,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: subtleForeground,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -476,14 +596,18 @@ class _ProxyHero extends StatelessWidget {
                     SelectableText(
                       proxyUrl,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: colorScheme.primary,
+                        color: foreground,
                         fontFamily: 'monospace',
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     Tooltip(
                       message: l10n.copyAddress,
-                      child: IconButton.filledTonal(
+                      child: IconButton.filled(
+                        style: IconButton.styleFrom(
+                          backgroundColor: foreground.withValues(alpha: 0.16),
+                          foregroundColor: foreground,
+                        ),
                         onPressed: onCopy,
                         icon: const Icon(Icons.copy, size: 18),
                       ),
@@ -493,9 +617,9 @@ class _ProxyHero extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   L10n.of('proxy_url_hint'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: subtleForeground),
                 ),
               ],
             );
@@ -508,12 +632,25 @@ class _ProxyHero extends StatelessWidget {
                 _StatusPill(
                   icon: stateIcon,
                   text: stateText,
-                  color: stateColor,
+                  color: foreground,
                 ),
                 FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: foreground,
+                    foregroundColor: colorScheme.primary,
+                  ),
                   onPressed: isBusy ? null : (isRunning ? onStop : onStart),
                   icon: Icon(isRunning ? Icons.stop : Icons.play_arrow),
                   label: Text(isRunning ? l10n.proxyStop : l10n.proxyStart),
+                ),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: foreground,
+                    side: BorderSide(color: foreground.withValues(alpha: 0.45)),
+                  ),
+                  onPressed: onGuide,
+                  icon: const Icon(Icons.help_outline),
+                  label: Text(L10n.of('usage_guide_button')),
                 ),
               ],
             );
@@ -552,9 +689,9 @@ class _StatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.38)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -614,7 +751,7 @@ class _MetricCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -626,7 +763,7 @@ class _MetricCard extends StatelessWidget {
                   height: 34,
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(icon, color: color, size: 19),
                 ),
@@ -673,22 +810,26 @@ class _QuickStartCard extends StatelessWidget {
   final bool hasAccount;
   final bool hasUsage;
   final bool proxyRunning;
+  final VoidCallback onAccountTap;
+  final VoidCallback onPricingTap;
+  final VoidCallback onProxyTap;
+  final VoidCallback onUsageTap;
+  final VoidCallback onGuideTap;
 
   const _QuickStartCard({
     required this.hasAccount,
     required this.hasUsage,
     required this.proxyRunning,
+    required this.onAccountTap,
+    required this.onPricingTap,
+    required this.onProxyTap,
+    required this.onUsageTap,
+    required this.onGuideTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final steps = [
-      (hasAccount, L10n.of('quick_step_account')),
-      (proxyRunning, L10n.of('quick_step_proxy')),
-      (hasUsage, L10n.of('quick_step_usage')),
-    ];
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -705,15 +846,52 @@ class _QuickStartCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: onGuideTap,
+                  icon: const Icon(Icons.help_outline, size: 18),
+                  label: Text(L10n.of('usage_guide_button')),
+                ),
               ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              L10n.of('quick_start_subtitle'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 10,
               runSpacing: 10,
               children: [
-                for (final step in steps)
-                  _StepChip(done: step.$1, text: step.$2),
+                _StepChip(
+                  done: hasAccount,
+                  text: L10n.of('quick_step_account'),
+                  icon: Icons.cloud_queue_outlined,
+                  onTap: onAccountTap,
+                ),
+                _StepChip(
+                  done: false,
+                  text: L10n.of('quick_step_pricing'),
+                  icon: Icons.sell_outlined,
+                  onTap: onPricingTap,
+                ),
+                _StepChip(
+                  done: proxyRunning,
+                  text: L10n.of('quick_step_proxy'),
+                  icon: Icons.play_arrow,
+                  onTap: onProxyTap,
+                ),
+                _StepChip(
+                  done: hasUsage,
+                  text: hasUsage
+                      ? L10n.of('quick_step_logs')
+                      : L10n.of('quick_step_usage'),
+                  icon: Icons.receipt_long_outlined,
+                  onTap: onUsageTap,
+                ),
               ],
             ),
           ],
@@ -726,32 +904,67 @@ class _QuickStartCard extends StatelessWidget {
 class _StepChip extends StatelessWidget {
   final bool done;
   final String text;
+  final IconData icon;
+  final VoidCallback onTap;
 
-  const _StepChip({required this.done, required this.text});
+  const _StepChip({
+    required this.done,
+    required this.text,
+    required this.icon,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final color = done
         ? const Color(0xFF16A34A)
-        : Theme.of(context).colorScheme.onSurfaceVariant;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
+        : Theme.of(context).colorScheme.primary;
+    return ActionChip(
+      avatar: Icon(done ? Icons.check_circle : icon, size: 18, color: color),
+      label: Text(text),
+      onPressed: onTap,
+      side: BorderSide(color: color.withValues(alpha: 0.35)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      labelStyle: TextStyle(color: color, fontWeight: FontWeight.w700),
+      backgroundColor: color.withValues(alpha: 0.08),
+    );
+  }
+}
+
+class _GuideStep extends StatelessWidget {
+  final int number;
+  final String text;
+
+  const _GuideStep({required this.number, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            done ? Icons.check_circle : Icons.radio_button_unchecked,
-            size: 16,
-            color: color,
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$number',
+              style: TextStyle(
+                color: colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
           ),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(color: color, fontWeight: FontWeight.w600),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../core/models/models.dart';
 import '../../core/pricing/default_model_prices.dart';
+import '../../core/providers/provider_catalog.dart';
 import 'tables.dart';
 
 part 'database.g.dart';
@@ -87,57 +88,16 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _seedCapabilities() async {
-    final capabilities = [
-      (
-        ProviderType.deepseek,
-        true,
-        true,
-        true,
-        true,
-        false,
-        'https://api.deepseek.com',
-      ),
-      (
-        ProviderType.mimo,
-        false,
-        true,
-        true,
-        true,
-        true,
-        'https://api.xiaomimimo.com/v1',
-      ),
-      (
-        ProviderType.gemini,
-        false,
-        true,
-        true,
-        true,
-        true,
-        'https://generativelanguage.googleapis.com/v1beta',
-      ),
-      (
-        ProviderType.openrouter,
-        true,
-        true,
-        true,
-        true,
-        false,
-        'https://openrouter.ai/api/v1',
-      ),
-      (ProviderType.customOpenAI, false, false, true, true, false, null),
-    ];
-
-    for (final (type, balance, models, usage, streaming, manual, baseUrl)
-        in capabilities) {
+    for (final entry in providerCatalog) {
       await into(providerCapabilities).insert(
         ProviderCapabilitiesCompanion.insert(
-          providerType: type,
-          supportsBalanceQuery: Value(balance),
-          supportsModelList: Value(models),
-          supportsUsageParsing: Value(usage),
-          supportsStreaming: Value(streaming),
-          requiresManualQuota: Value(manual),
-          baseUrlTemplate: Value(baseUrl),
+          providerType: entry.type,
+          supportsBalanceQuery: Value(entry.supportsBalanceQuery),
+          supportsModelList: Value(entry.supportsModelList),
+          supportsUsageParsing: Value(entry.supportsUsageParsing),
+          supportsStreaming: Value(entry.supportsStreaming),
+          requiresManualQuota: Value(!entry.supportsBalanceQuery),
+          baseUrlTemplate: Value(entry.defaultBaseUrl),
         ),
         mode: InsertMode.insertOrReplace,
       );

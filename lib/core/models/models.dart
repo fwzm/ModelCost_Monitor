@@ -1,4 +1,29 @@
-enum ProviderType { deepseek, mimo, gemini, openrouter, customOpenAI }
+enum ProviderType {
+  deepseek,
+  openai,
+  anthropic,
+  gemini,
+  openrouter,
+  mimo,
+  azureOpenAI,
+  groq,
+  mistral,
+  togetherAI,
+  fireworksAI,
+  perplexity,
+  xai,
+  cohere,
+  cerebras,
+  moonshot,
+  qwen,
+  zhipu,
+  siliconFlow,
+  volcengineArk,
+  tencentHunyuan,
+  minimax,
+  novita,
+  customOpenAI,
+}
 
 enum RequestStatus {
   completed,

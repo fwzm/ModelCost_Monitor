@@ -1,6 +1,6 @@
 # ModelCost Monitor
 
-ModelCost Monitor 是一个本地运行的跨平台 AI 模型 API 用量监控软件，用来统计 DeepSeek、小米 MiMo、Gemini、OpenRouter 以及自定义 OpenAI-compatible 服务的 token 用量、费用、余额、历史趋势和预算风险。
+ModelCost Monitor 是一个本地运行的跨平台 AI 模型 API 用量监控软件，用来统计 DeepSeek、OpenAI、Claude、Gemini、OpenRouter、小米 MiMo、Groq、Mistral、通义千问、智谱 GLM、硅基流动、火山方舟、腾讯混元以及自定义 OpenAI-compatible 服务的 token 用量、费用、余额、历史趋势和预算风险。
 
 项目目标是让个人用户和小团队在不依赖第三方服务器的前提下，看清楚每个模型、每个厂商、每天和每月到底花了多少钱。
 
@@ -13,6 +13,9 @@ ModelCost Monitor 是一个本地运行的跨平台 AI 模型 API 用量监控�
 - **余额与账单**：支持厂商官方余额接口；没有官方接口的厂商支持手动额度和本地代理记账。
 - **价格表可编辑**：所有模型价格都存在本地数据库，用户可修改、导入、重新计算历史费用。
 - **一键价格配置**：内置 DeepSeek、Gemini 常用公开价格；OpenRouter 支持从官方模型接口联网导入价格。
+- **一键账号预填**：添加账号时内置常见厂商目录，自动填写常用 Base URL、默认模型、接口格式和支持能力说明。
+- **点击式快速上手**：总览页快速上手步骤可直接跳转到账号、价格表、代理启动和日志页面，并提供外部客户端接入引导。
+- **更易上手的界面**：共享 Flutter UI 已优化 Material 3 视觉风格、总览代理启动卡片、指标卡和账号页空状态，Windows 与 Android 端保持一致体验。
 - **图表与导出**：支持费用趋势、模型占比、token 对比、estimated 记录比例，以及 CSV/JSON 导出。
 - **Windows 体验**：支持系统托盘、开机自启、本地代理常驻、端口占用自动回退。
 - **Android 体验**：支持桌面小组件、通知、前台服务合规配置；默认不静默后台长期监听代理端口。
@@ -22,28 +25,35 @@ ModelCost Monitor 是一个本地运行的跨平台 AI 模型 API 用量监控�
 | 厂商 | 状态 | 说明 |
 | --- | --- | --- |
 | DeepSeek | 内置 | 支持 `/user/balance` 余额查询、OpenAI-compatible `usage` 解析、`deepseek-chat` 与 `deepseek-reasoner` 默认价格。 |
-| 小米 MiMo | 内置 | 按 OpenAI-compatible 接口处理；当前不假设存在稳定官方余额接口，支持用户手动额度和价格。 |
+| OpenAI | 内置目录 | 自动填写 `https://api.openai.com/v1`，按 OpenAI-compatible usage 本地记账。 |
+| Anthropic Claude | 内置目录 | 自动填写 `https://api.anthropic.com/v1`，按 Anthropic Messages 风格标注，非标准 usage 后续走映射/估算。 |
 | Gemini | 内置 | 支持 `usageMetadata` 中的 prompt、candidate、thoughts、cached token 解析；内置常用模型默认价格。 |
 | OpenRouter | 内置 | 支持 credits 查询；支持联网从 `https://openrouter.ai/api/v1/models` 导入模型价格。 |
+| 小米 MiMo | 内置 | 按 OpenAI-compatible 接口处理；当前不假设存在稳定官方余额接口，支持用户手动额度和价格。 |
+| Azure OpenAI | 内置目录 | 提供 Azure endpoint 模板，用户按自己的 resource、deployment 和 api-version 修改。 |
+| Groq / Mistral / Together / Fireworks / Perplexity / xAI / Cohere / Cerebras | 内置目录 | 自动填写常用 OpenAI-compatible Base URL，并在账号页展示默认模型和能力提示。 |
+| Kimi / Qwen / 智谱 / 硅基流动 / 火山方舟 / 腾讯混元 / MiniMax / Novita | 内置目录 | 覆盖常见国内与聚合服务，默认走本地代理 usage 解析和可编辑价格表。 |
 | 自定义 OpenAI-compatible | 内置 | 用户可填任意 Base URL，支持标准 Chat Completions `usage` 字段，并预留 JSONPath 映射扩展。 |
 
 ## 快速开始
 
 1. 打开 Windows 桌面版或 Android 版 App。
 2. 进入 **账号** 页面，点击添加账号。
-3. 选择厂商后，软件会自动填写常用 Base URL 和显示名称；用户只需要填自己的 API Key。
+3. 选择厂商后，软件会自动填写常用 Base URL、显示名称，并展示默认模型、接口格式、余额/模型列表/流式/usage 支持情况；大多数厂商只需要填自己的 API Key。
 4. 进入 **价格表** 页面：
    - 点击 **一键填入常用价格**，写入 DeepSeek 和 Gemini 的常用公开价格。
    - 点击 **联网导入 OpenRouter 价格**，从 OpenRouter 官方模型接口导入模型价格。
    - MiMo 或自定义服务如无公开价格，请手动添加。
 5. 回到 **总览** 页面，启动本地代理。
-6. 将外部客户端的 Base URL 改成总览页显示的代理地址，例如：
+6. 总览页的 **快速上手** 按钮可以直接跳到对应功能；点击 **启动代理** 会在已有账号时启动代理，没有账号时自动跳到账号页。
+7. 账号页会用卡片展示厂商、Base URL、密钥别名、币种和启用状态；首次使用时可直接点击空状态或右下角按钮添加账号。
+8. 将外部客户端的 Base URL 改成总览页显示的代理地址，例如：
 
 ```text
 http://127.0.0.1:8787
 ```
 
-7. 正常调用模型。ModelCost Monitor 会记录请求次数、token、estimated 状态和费用。
+9. 正常调用模型。ModelCost Monitor 会记录请求次数、token、estimated 状态和费用。
 
 ## 本地代理路径
 
@@ -171,6 +181,26 @@ flutter build windows
 build/windows/x64/runner/Release/modelcost_monitor.exe
 ```
 
+刷新本机验收版：
+
+```powershell
+.\scripts\install_windows_desktop_shortcut.ps1
+```
+
+这个脚本会把 Windows Release 运行目录复制到：
+
+```text
+%LOCALAPPDATA%\ModelCost Monitor\Windows
+```
+
+桌面只保留一个快捷方式：
+
+```text
+Desktop\ModelCost Monitor.lnk
+```
+
+如果桌面存在旧的 `ModelCost Monitor` 文件夹，脚本会安全删除它，避免桌面堆积运行文件。
+
 构建 Android Debug APK：
 
 ```powershell
@@ -191,6 +221,8 @@ Windows MVP 已包含：
 - 价格表管理
 - 默认价格填充
 - OpenRouter 联网价格导入
+- 常见厂商账号目录与 Base URL 自动填充
+- 总览快速上手跳转和使用引导
 - 基础 Dashboard
 - 本地代理启动/停止
 - 端口回退
@@ -198,6 +230,12 @@ Windows MVP 已包含：
 - CSV/JSON 导出
 - Windows Release 构建
 - Android Debug APK 构建
+
+最近体验优化：
+
+- 总览页代理地址卡片升级为更醒目的渐变入口，提供复制、启动/停止和使用引导快捷操作。
+- 指标卡、导航栏、按钮、输入框和列表圆角统一，提升桌面端与移动端一致性。
+- 账号页加入更友好的首次使用空状态、悬浮添加按钮和信息密度更高的账号卡片。
 
 后续重点：
 

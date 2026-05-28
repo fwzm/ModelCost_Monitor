@@ -27,11 +27,11 @@ class MyApp extends ConsumerWidget {
 
   ThemeData _buildTheme(Brightness brightness) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF2563EB),
+      seedColor: const Color(0xFF4F46E5),
       brightness: brightness,
     );
     final isDark = brightness == Brightness.dark;
-    final surfaceTint = isDark ? Colors.white : colorScheme.primary;
+    final surfaceTint = isDark ? const Color(0xFF93C5FD) : colorScheme.primary;
 
     return ThemeData(
       useMaterial3: true,
@@ -46,7 +46,7 @@ class MyApp extends ConsumerWidget {
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: colorScheme.surface,
+        backgroundColor: Colors.transparent,
         foregroundColor: colorScheme.onSurface,
         titleTextStyle: TextStyle(
           color: colorScheme.onSurface,
@@ -57,11 +57,11 @@ class MyApp extends ConsumerWidget {
       cardTheme: CardThemeData(
         elevation: 0,
         margin: EdgeInsets.zero,
-        color: colorScheme.surface,
+        color: colorScheme.surface.withValues(alpha: isDark ? 0.92 : 0.96),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(18),
           side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.58),
           ),
         ),
       ),
@@ -71,17 +71,17 @@ class MyApp extends ConsumerWidget {
           alpha: isDark ? 0.22 : 0.46,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
             color: colorScheme.outlineVariant.withValues(alpha: 0.55),
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: colorScheme.primary, width: 1.4),
         ),
         contentPadding: const EdgeInsets.symmetric(
@@ -93,25 +93,34 @@ class MyApp extends ConsumerWidget {
         style: ElevatedButton.styleFrom(
           elevation: 0,
           minimumSize: const Size(0, 44),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 44),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 44),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: 72,
+        backgroundColor: colorScheme.surface.withValues(
+          alpha: isDark ? 0.94 : 0.98,
+        ),
         indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
@@ -123,9 +132,11 @@ class MyApp extends ConsumerWidget {
         ),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: colorScheme.surface.withValues(
+          alpha: isDark ? 0.88 : 0.94,
+        ),
         indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
         ),
         selectedLabelTextStyle: TextStyle(
           color: colorScheme.primary,
@@ -138,11 +149,11 @@ class MyApp extends ConsumerWidget {
       ),
       listTileTheme: ListTileThemeData(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }
@@ -169,7 +180,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget _getPage(int index) {
     switch (index) {
       case 0:
-        return const DashboardPage();
+        return DashboardPage(onNavigate: _selectPage);
       case 1:
         return const AccountsPage();
       case 2:
@@ -185,7 +196,7 @@ class _MainScreenState extends State<MainScreen> {
       case _moreIndex:
         return _MorePage(onSelectPage: _selectPage);
       default:
-        return const DashboardPage();
+        return DashboardPage(onNavigate: _selectPage);
     }
   }
 
@@ -237,7 +248,14 @@ class _MainScreenState extends State<MainScreen> {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            colorScheme.surface,
+            colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+          ],
+        ),
         border: Border(
           right: BorderSide(
             color: colorScheme.outlineVariant.withValues(alpha: 0.6),
@@ -351,10 +369,19 @@ class _BrandMark extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(14),
+            gradient: LinearGradient(
+              colors: [colorScheme.primary, colorScheme.tertiary],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.primary.withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          child: Icon(Icons.query_stats, color: colorScheme.onPrimaryContainer),
+          child: Icon(Icons.query_stats, color: colorScheme.onPrimary),
         ),
         if (extended) ...[
           const SizedBox(width: 12),
@@ -392,8 +419,13 @@ class _MorePage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(8),
+              gradient: LinearGradient(
+                colors: [
+                  colorScheme.primaryContainer,
+                  colorScheme.tertiaryContainer.withValues(alpha: 0.7),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
               children: [

@@ -85,10 +85,88 @@ const Map<String, String> en = {
   'required': 'Required',
   'invalid_number': 'Invalid number',
   'provider_deepseek': 'DeepSeek',
+  'provider_openai': 'OpenAI',
+  'provider_anthropic': 'Anthropic Claude',
   'provider_mimo': 'MiMo',
   'provider_gemini': 'Gemini',
   'provider_openrouter': 'OpenRouter',
+  'provider_azure_openai': 'Azure OpenAI',
+  'provider_groq': 'Groq',
+  'provider_mistral': 'Mistral AI',
+  'provider_together_ai': 'Together AI',
+  'provider_fireworks_ai': 'Fireworks AI',
+  'provider_perplexity': 'Perplexity',
+  'provider_xai': 'xAI',
+  'provider_cohere': 'Cohere',
+  'provider_cerebras': 'Cerebras',
+  'provider_moonshot': 'Kimi / Moonshot',
+  'provider_qwen': 'Qwen / DashScope',
+  'provider_zhipu': 'Zhipu GLM',
+  'provider_silicon_flow': 'SiliconFlow',
+  'provider_volcengine_ark': 'Volcengine Ark',
+  'provider_tencent_hunyuan': 'Tencent Hunyuan',
+  'provider_minimax': 'MiniMax',
+  'provider_novita': 'Novita AI',
   'provider_custom_openai': 'Custom OpenAI',
+  'provider_base_url_hint': 'Common Base URL has been filled for this provider',
+  'provider_default_model': 'Default model',
+  'provider_api_style': 'API style',
+  'provider_supports_balance': 'Balance query',
+  'provider_supports_models': 'Model list',
+  'provider_supports_usage': 'Usage parsing',
+  'provider_supports_streaming': 'Streaming',
+  'provider_needs_custom_url': 'Requires account-specific URL',
+  'api_style_openai': 'OpenAI-compatible',
+  'api_style_anthropic': 'Anthropic Messages',
+  'api_style_gemini': 'Gemini',
+  'api_style_azure': 'Azure OpenAI',
+  'api_style_custom': 'Custom mapping',
+  'provider_note_deepseek':
+      'Built-in DeepSeek balance query and OpenAI-compatible usage parsing.',
+  'provider_note_openai':
+      'OpenAI does not provide a general balance API; local accounting uses proxy response usage.',
+  'provider_note_anthropic':
+      'Uses Anthropic Messages format; non-standard fields fall back to local estimation or future mapping rules.',
+  'provider_note_gemini':
+      'Supports Gemini usageMetadata; streaming without usage falls back to estimation.',
+  'provider_note_openrouter':
+      'Supports credits query and model-level price import, useful as a multi-model gateway.',
+  'provider_note_mimo':
+      'Handled as OpenAI-compatible; balance and plan quotas can be maintained manually.',
+  'provider_note_azure_openai':
+      'Replace resource, deployment, and api-version values for your Azure resource.',
+  'provider_note_groq':
+      'OpenAI-compatible and usually exposes a standard usage field.',
+  'provider_note_mistral':
+      'OpenAI-compatible. Confirm per-model prices in the pricing page.',
+  'provider_note_together_ai':
+      'OpenAI-compatible. Model names often include organization or model paths.',
+  'provider_note_fireworks_ai':
+      'OpenAI-compatible. Model names often use accounts/fireworks/models/... format.',
+  'provider_note_perplexity':
+      'OpenAI-compatible for search-augmented models; balance is usually tracked manually.',
+  'provider_note_xai': 'OpenAI-compatible through the official xAI v1 API.',
+  'provider_note_cohere':
+      'Uses Cohere compatibility API and OpenAI-compatible usage parsing.',
+  'provider_note_cerebras':
+      'OpenAI-compatible high-speed inference with local usage accounting.',
+  'provider_note_moonshot': 'Kimi / Moonshot OpenAI-compatible API.',
+  'provider_note_qwen':
+      'Alibaba DashScope OpenAI-compatible mode. Confirm pricing in the console or pricing page.',
+  'provider_note_zhipu':
+      'Zhipu GLM OpenAI-compatible v4 API; balances are usually checked in the provider console.',
+  'provider_note_silicon_flow':
+      'SiliconFlow OpenAI-compatible API for aggregated open models.',
+  'provider_note_volcengine_ark':
+      'Volcengine Ark OpenAI-compatible API; models may be endpoint IDs or aliases.',
+  'provider_note_tencent_hunyuan':
+      'Tencent Hunyuan OpenAI-compatible API with local accounting from usage fields.',
+  'provider_note_minimax':
+      'MiniMax OpenAI-compatible API. Confirm models and pricing in the console.',
+  'provider_note_novita':
+      'Novita OpenAI-compatible API with model list support and local usage accounting.',
+  'provider_note_custom_openai':
+      'For any OpenAI-compatible service. Confirm Base URL and model prices.',
   'logs_page_title': 'Request Logs',
   'filter': 'Filter',
   'filter_provider': 'By Provider',
@@ -156,9 +234,23 @@ const Map<String, String> en = {
   'records': 'records',
   'missing_price': 'Missing price',
   'quick_start_title': 'Quick Start',
+  'quick_start_subtitle':
+      'Click a step to jump to that setup area. Most users only need account, pricing, and proxy.',
   'quick_step_account': 'Add account',
+  'quick_step_pricing': 'Check pricing',
   'quick_step_proxy': 'Start proxy',
   'quick_step_usage': 'Record usage',
+  'quick_step_logs': 'View logs',
+  'usage_guide_button': 'Guide',
+  'quick_need_account_first': 'Add an account first, then start the proxy.',
+  'usage_guide_title': 'Connect an external client to the proxy',
+  'usage_guide_step_1': 'Add and enable at least one API key in Accounts.',
+  'usage_guide_step_2': 'Set your chat client or SDK Base URL to {url}.',
+  'usage_guide_step_3':
+      'Keep using the provider route, for example /proxy/deepseek/v1/chat/completions.',
+  'usage_guide_step_4':
+      'After one request, open Logs to review tokens, cost, and estimated flags.',
+  'open_logs': 'Open logs',
   'apply_builtin_prices': 'Fill common prices',
   'import_openrouter_prices': 'Import OpenRouter prices online',
   'prices_imported': 'Imported {count} prices',
@@ -209,7 +301,7 @@ const Map<String, String> en = {
       'View today\'s and monthly cost overview, including request count, token usage, and proxy status.',
   'help_accounts_title': 'Account Management',
   'help_accounts_desc':
-      'Add, edit or delete API accounts. Supports DeepSeek, MiMo, Gemini, OpenRouter and custom OpenAI-compatible endpoints.',
+      'Add, edit or delete API accounts. Includes common providers such as DeepSeek, OpenAI, Claude, Gemini, OpenRouter, Groq, Qwen, Zhipu, Volcengine Ark, and Tencent Hunyuan.',
   'help_pricing_title': 'Pricing Configuration',
   'help_pricing_desc':
       'Configure input/output prices for each model. The system automatically calculates costs based on token count and price.',
@@ -234,7 +326,7 @@ const Map<String, String> en = {
       'In Settings, you can set monthly budget and balance alert thresholds. The system will send notifications when spending exceeds the set value.',
   'help_faq3_q': 'What models are supported?',
   'help_faq3_a':
-      'The system supports all OpenAI API-compatible models, including DeepSeek, Gemini, Claude, GPT, etc. Just add the corresponding price configuration.',
+      'The app includes a common provider catalog and supports OpenAI-compatible models. Selecting a provider fills the common Base URL automatically; prices remain editable.',
   'help_faq4_q': 'Is my data secure?',
   'help_faq4_a':
       'Yes. All API keys are encrypted using secure storage, and no request content is uploaded to external servers.',

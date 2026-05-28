@@ -300,12 +300,50 @@ class L10nLocalizations {
     switch (providerType) {
       case 'deepseek':
         return providerDeepseek;
+      case 'openai':
+        return L10n.of('provider_openai');
+      case 'anthropic':
+        return L10n.of('provider_anthropic');
       case 'mimo':
         return providerMimo;
       case 'gemini':
         return providerGemini;
       case 'openrouter':
         return providerOpenrouter;
+      case 'azureOpenAI':
+        return L10n.of('provider_azure_openai');
+      case 'groq':
+        return L10n.of('provider_groq');
+      case 'mistral':
+        return L10n.of('provider_mistral');
+      case 'togetherAI':
+        return L10n.of('provider_together_ai');
+      case 'fireworksAI':
+        return L10n.of('provider_fireworks_ai');
+      case 'perplexity':
+        return L10n.of('provider_perplexity');
+      case 'xai':
+        return L10n.of('provider_xai');
+      case 'cohere':
+        return L10n.of('provider_cohere');
+      case 'cerebras':
+        return L10n.of('provider_cerebras');
+      case 'moonshot':
+        return L10n.of('provider_moonshot');
+      case 'qwen':
+        return L10n.of('provider_qwen');
+      case 'zhipu':
+        return L10n.of('provider_zhipu');
+      case 'siliconFlow':
+        return L10n.of('provider_silicon_flow');
+      case 'volcengineArk':
+        return L10n.of('provider_volcengine_ark');
+      case 'tencentHunyuan':
+        return L10n.of('provider_tencent_hunyuan');
+      case 'minimax':
+        return L10n.of('provider_minimax');
+      case 'novita':
+        return L10n.of('provider_novita');
       case 'customOpenAI':
         return providerCustomOpenai;
       default:

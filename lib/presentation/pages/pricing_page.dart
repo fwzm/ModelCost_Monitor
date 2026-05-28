@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/models.dart';
+import '../../core/providers/provider_catalog.dart';
 import '../../data/database/database.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/providers.dart';
@@ -50,10 +51,15 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                 DropdownButtonFormField<ProviderType>(
                   initialValue: _selectedProvider,
                   decoration: InputDecoration(labelText: l10n.provider),
-                  items: ProviderType.values.map((type) {
+                  isExpanded: true,
+                  items: providerCatalog.map((entry) {
+                    final type = entry.type;
                     return DropdownMenuItem(
                       value: type,
-                      child: Text(l10n.providerName(type.name)),
+                      child: Text(
+                        l10n.providerName(type.name),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -171,18 +177,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
   }
 
   String _modelHint(ProviderType providerType) {
-    switch (providerType) {
-      case ProviderType.deepseek:
-        return 'deepseek-chat';
-      case ProviderType.gemini:
-        return 'gemini-2.5-flash';
-      case ProviderType.openrouter:
-        return 'anthropic/claude-sonnet-4.5';
-      case ProviderType.mimo:
-        return 'mimo-v2.5';
-      case ProviderType.customOpenAI:
-        return 'gpt-compatible-model';
-    }
+    return providerCatalogFor(providerType).defaultModel;
   }
 
   Future<void> _addPrice() async {
@@ -520,12 +515,36 @@ class _PriceTile extends StatelessWidget {
     switch (type) {
       case ProviderType.deepseek:
         return const Color(0xFF2563EB);
+      case ProviderType.openai:
+        return const Color(0xFF111827);
+      case ProviderType.anthropic:
+        return const Color(0xFF92400E);
       case ProviderType.mimo:
         return const Color(0xFF7C3AED);
       case ProviderType.gemini:
         return const Color(0xFF16A34A);
       case ProviderType.openrouter:
         return const Color(0xFFF97316);
+      case ProviderType.azureOpenAI:
+        return const Color(0xFF4F46E5);
+      case ProviderType.qwen:
+      case ProviderType.zhipu:
+      case ProviderType.siliconFlow:
+      case ProviderType.volcengineArk:
+      case ProviderType.tencentHunyuan:
+      case ProviderType.moonshot:
+        return const Color(0xFFDC2626);
+      case ProviderType.groq:
+      case ProviderType.mistral:
+      case ProviderType.togetherAI:
+      case ProviderType.fireworksAI:
+      case ProviderType.perplexity:
+      case ProviderType.xai:
+      case ProviderType.cohere:
+      case ProviderType.cerebras:
+      case ProviderType.minimax:
+      case ProviderType.novita:
+        return const Color(0xFF6D28D9);
       case ProviderType.customOpenAI:
         return const Color(0xFF0F766E);
     }

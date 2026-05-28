@@ -10,6 +10,7 @@ import '../../l10n/l10n.dart';
 import '../../providers/providers.dart';
 import '../../data/database/database.dart';
 import '../../core/models/models.dart';
+import '../../core/providers/provider_catalog.dart';
 
 class LogsPage extends ConsumerStatefulWidget {
   const LogsPage({super.key});
@@ -224,10 +225,10 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                   decoration: InputDecoration(labelText: l10n.filterProvider),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All')),
-                    ...ProviderType.values.map(
-                      (type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(l10n.providerName(type.name)),
+                    ...providerCatalog.map(
+                      (entry) => DropdownMenuItem(
+                        value: entry.type,
+                        child: Text(l10n.providerName(entry.type.name)),
                       ),
                     ),
                   ],
