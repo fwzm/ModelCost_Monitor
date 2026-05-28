@@ -240,8 +240,8 @@ Windows MVP 已包含：
 - 中文字体优化：Windows 使用微软雅黑、Android 使用思源黑体，通过 TextTheme.apply 全局统一字体族和粗细，消除宋体回退和粗细不一致问题。
 - 内置价格表大幅扩充：新增 OpenAI（GPT-4.1/o3/o4-mini）、Claude（4 Opus/4 Sonnet）、Grok（3/3-mini）、通义千问、智谱 GLM、MiniMax、Kimi、硅基流动、Groq、Mistral、Perplexity、Cohere、火山方舟、腾讯混元等主流模型价格，并更新 Gemini 至 3.1 Pro / 3.5 Flash。
 - 价格表按厂商分组折叠显示：收起时显示厂商名、模型数量和价格区间概览，展开后展示每个模型的紧凑价格行，一目了然。
-- 价格表支持双视图切换：「按厂商」查看同一平台的所有模型，或「按模型」查看同一模型在不同平台的价格对比。
-- 价格表分组头部吸顶（sticky header），滚动时始终可见，方便随时展开/收起。
+- 价格表支持双视图切换：「按厂商」查看同一平台的所有模型（可折叠），或「按模型」按品牌系列归类（Claude、OpenAI、Gemini、DeepSeek 等），查看同一模型在不同平台的价格对比。
+- 价格表分组头部吸顶（sticky header），滚动时始终可见，点击即可展开/收起。
 
 后续重点：
 
